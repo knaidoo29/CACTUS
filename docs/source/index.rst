@@ -66,10 +66,12 @@ is written mostly in python.
 The following Python modules are required:
 
 * `numpy <http://www.numpy.org/>`_
-
-..  If you want to run with MPI you will need the following:
-..  * `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_
-..  * `MPIutils <https://github.com/knaidoo29/MPIutils>`_
+* `matplotlib <ttps://matplotlib.org/>`_
+* `mpi4py <https://mpi4py.readthedocs.io/en/stable/>`_
+* `mpi4py-fft <https://mpi4py-fft.readthedocs.io/en/latest/>`_
+* `FIESTA <https://github.com/knaidoo29/FIESTA>`_
+* `MAGPIE <https://github.com/knaidoo29/MAGPIE>`_
+* `SHIFT <https://github.com/knaidoo29/SHIFT>`_
 
 For testing you will require `nose <https://nose.readthedocs.io/en/latest/>`_ or
 `pytest <http://pytest.org/en/latest/>`_ .
