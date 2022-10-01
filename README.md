@@ -14,11 +14,12 @@
 ## Dependencies
 
 * [numpy](http://www.numpy.org/)
+* [scipy](https://scipy.org/)
 * [matplotlib](https://matplotlib.org/)
 * [mpi4py](https://mpi4py.readthedocs.io/en/stable/)
 * [mpi4py-fft](https://mpi4py-fft.readthedocs.io/en/latest/)
-* [FIESTA](https://github.com/knaidoo29/FIESTA)
-* [MAGPIE](https://github.com/knaidoo29/MAGPIE)
+* [FIESTA](https://github.com/knaidoo29/FIESTA) (install developer branch)
+* [MAGPIE](https://github.com/knaidoo29/MAGPIE) (install developer branch)
 * [SHIFT](https://github.com/knaidoo29/SHIFT)
 
 ## Installation
