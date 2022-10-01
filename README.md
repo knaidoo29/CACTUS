@@ -1,5 +1,6 @@
 # CaCTus: Cosmic web Classification Toolkit
 
+[![Documentation Status](https://readthedocs.org/projects/cactus-doc/badge/?version=latest)](https://cactus-doc.readthedocs.io/en/latest/?badge=latest)
 
 |               |                                       |
 |---------------|---------------------------------------|

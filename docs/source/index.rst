@@ -12,8 +12,8 @@ CaCTus: Cosmic web Classification Toolkit
   :target: https://cactus-doc.readthedocs.io/en/latest/?badge=latest
   :alt: Documentation Status
 
-.. image:: https://circleci.com/gh/knaidoo29/magpie/tree/master.svg?style=svg
-    :target: https://circleci.com/gh/knaidoo29/magpie/tree/master
+.. .. image:: https://circleci.com/gh/knaidoo29/magpie/tree/master.svg?style=svg
+..    :target: https://circleci.com/gh/knaidoo29/magpie/tree/master
 
 .. .. image:: https://codecov.io/gh/knaidoo29/magpie/branch/development/graph/badge.svg?token=P7H8FAJT43
 ..    :target: https://codecov.io/gh/knaidoo29/magpie
