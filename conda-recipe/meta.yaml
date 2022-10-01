@@ -1,0 +1,35 @@
+{% set name = "magpie-pkg" %}
+{% set version = "0.3.2" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  path: ..
+
+requirements:
+  host:
+    - gfortran
+    - python
+    - setuptools >=49.6.0
+    - numpy >=1.20
+    - scipy >=1.6.2
+    - matplotlib >=3.4.1
+    - healpy >=1.14
+  run:
+    - python
+    - setuptools >=49.6.0
+    - numpy >=1.20
+    - scipy >=1.6.2
+    - matplotlib >=3.4.1
+    - healpy >=1.14
+
+test:
+  imports:
+    - magpie
+
+about:
+  home: "https://magpie-doc.readthedocs.io/"
+  license: MIT
+  summary: "Monte carlo weighted pixel remapping"
