@@ -7,9 +7,9 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md')) as f:
     long_description = f.read()
 
-#ext1 = Extension(name='magpie.src.utils', sources=['magpie/src/utils.f90'])
+ext1 = Extension(name='cactus.src.matrix', sources=['cactus/src/matrix.f90'])
 
-exts = []#[ext1]
+exts = [ext1]
 
 setup(name = 'cactus',
       version = '0.0.0',
