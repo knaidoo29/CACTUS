@@ -7,9 +7,11 @@ this_directory = path.abspath(path.dirname(__file__))
 with open(path.join(this_directory, 'README.md')) as f:
     long_description = f.read()
 
-ext1 = Extension(name='cactus.src.matrix', sources=['cactus/src/matrix.f90'])
-
-exts = [ext1]
+exts = []
+exts.append(Extension(name='cactus.src.matrix', sources=['cactus/src/matrix.f90']))
+exts.append(Extension(name='cactus.src.pixel_1dto2d', sources=['cactus/src/pixel_1dto2d.f90']))
+exts.append(Extension(name='cactus.src.pixel_1dto3d', sources=['cactus/src/pixel_1dto3d.f90']))
+exts.append(Extension(name='cactus.src.union_finder', sources=['cactus/src/union_finder.f90']))
 
 setup(name = 'cactus',
       version = '0.0.0',
