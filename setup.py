@@ -9,6 +9,7 @@ with open(path.join(this_directory, 'README.md')) as f:
 
 exts = []
 exts.append(Extension(name='cactus.src.matrix', sources=['cactus/src/matrix.f90']))
+exts.append(Extension(name='cactus.src.pixel_util', sources=['cactus/src/pixel_util.f90']))
 exts.append(Extension(name='cactus.src.pixel_1dto2d', sources=['cactus/src/pixel_1dto2d.f90']))
 exts.append(Extension(name='cactus.src.pixel_1dto3d', sources=['cactus/src/pixel_1dto3d.f90']))
 exts.append(Extension(name='cactus.src.union_finder', sources=['cactus/src/union_finder.f90']))
