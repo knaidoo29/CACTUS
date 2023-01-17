@@ -25,3 +25,6 @@ from .union_finder import shuffle_down
 from .union_finder import order_label_index
 from .union_finder import hoshen_kopelman_2d
 from .union_finder import hoshen_kopelman_3d
+from .union_finder import resolve_clashes
+from .union_finder import sum4group
+from .union_finder import avg4group

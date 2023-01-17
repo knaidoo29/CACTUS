@@ -5,6 +5,22 @@ include "pixel_1dto3d.f90"
 
 subroutine cascade(lenlabels, labels, indexin, indexout)
 
+  ! Cascade label index.
+  !
+  ! Parameters
+  ! ----------
+  ! lenlabels : int
+  !   Length of label array.
+  ! labels : int array
+  !   Label array.
+  ! indexin : int
+  !   Label index in.
+  !
+  ! Returns
+  ! -------
+  ! indexout : out
+  !   Cascaded label index out.
+
   implicit none
 
   integer, intent(in) :: lenlabels, labels(lenlabels), indexin
@@ -21,6 +37,22 @@ end subroutine cascade
 
 subroutine cascade_all(maxlabel, lenlabels, labels, labelsout)
 
+  ! Cascade label index for an array.
+  !
+  ! Parameters
+  ! ----------
+  ! maxlabel : int
+  !   Maximum label.
+  ! lenlabels : int
+  !   Length of label array.
+  ! labels : int array
+  !   Label array.
+  !
+  ! Returns
+  ! -------
+  ! labelsout : int array
+  !   Cascade all label index in an array.
+
   implicit none
 
   integer, intent(in) :: maxlabel, lenlabels, labels(lenlabels)
@@ -29,7 +61,6 @@ subroutine cascade_all(maxlabel, lenlabels, labels, labelsout)
   integer :: i, j
 
   do i = 1, maxlabel
-    labelsout(i) = labels(i)
     call cascade(lenlabels, labels, labels(i), j)
     labelsout(i) = j
   end do
@@ -38,6 +69,24 @@ end subroutine cascade_all
 
 
 subroutine unionise(ind1, ind2, lenlabels, labels, ind1out, ind2out, indout)
+
+  ! Finds the union of two label indexes.
+  !
+  ! Parameters
+  ! ----------
+  ! ind1, ind2 : int
+  !   Index 1 and 2.
+  ! lenlabels : int
+  !   Length of label array.
+  ! labels : int array
+  !   Label array.
+  !
+  ! Returns
+  ! -------
+  ! ind1out, ind2out : int
+  !   Outputted index 1 and 2.
+  ! indout : int
+  !   Index out.
 
   implicit none
 
@@ -59,6 +108,22 @@ end subroutine unionise
 
 subroutine get_nlabels(maxlabel, lenlabels, labels, nlabels)
 
+  ! Finds the union of two label indexes.
+  !
+  ! Parameters
+  ! ----------
+  ! maxlabel : int
+  !   Maximum label.
+  ! lenlabels : int
+  !   Length of label array.
+  ! labels : int array
+  !   Label array.
+  !
+  ! Returns
+  ! -------
+  ! nlabels : int array
+  !   Number of recurrences for each label index.
+
   implicit none
 
   integer, intent(in) :: maxlabel, lenlabels
@@ -72,13 +137,33 @@ subroutine get_nlabels(maxlabel, lenlabels, labels, nlabels)
   end do
 
   do i = 1, lenlabels
-    nlabels(labels(i)) = nlabels(labels(i)) + 1
+    if ((labels(i) .gt. 0) .and. (labels(i) .lt. maxlabel+1)) then
+      nlabels(labels(i)) = nlabels(labels(i)) + 1
+    end if
   end do
 
 end subroutine get_nlabels
 
 
 subroutine shuffle_down(maxlabel, lenlabels, labels, newmaxlabel, labelsout)
+
+  ! Shuffle label index for an array.
+  !
+  ! Parameters
+  ! ----------
+  ! maxlabel : int
+  !   Maximum label.
+  ! lenlabels : int
+  !   Length of label array.
+  ! labels : int array
+  !   Label array.
+  !
+  ! Returns
+  ! -------
+  ! newmaxlabel : int
+  !   Output maximum label.
+  ! labelsout : int array
+  !   Cascade all label index in an array.
 
   implicit none
 
@@ -111,6 +196,28 @@ end subroutine shuffle_down
 
 subroutine order_label_index(maxlabel, lenlabels, labels, start_index &
   , end_index, nlabels, orderlabels, indexlabels)
+
+  ! Order array index by label index.
+  !
+  ! Parameters
+  ! ----------
+  ! maxlabel : int
+  !   Maximum label.
+  ! lenlabels : int
+  !   Length of label array.
+  ! labels : int array
+  !   Label array.
+  !
+  ! Returns
+  ! -------
+  ! start_index, end_index : int array
+  !   Start and end for each label index
+  ! nlabels : int array
+  !   Number of recurrences for each label index.
+  ! orderlabels : int array
+  !   Ordered label values.
+  ! indexlabels : int array
+  !   Ordered indexes for each label.
 
   implicit none
 
@@ -149,6 +256,24 @@ end subroutine order_label_index
 
 
 subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel, group)
+
+  ! Hoshen-Kopelman algorithm in 2D.
+  !
+  ! Parameters
+  ! ----------
+  ! binmap : int array
+  !   Binary array.
+  ! nxgrid, nygrid : int
+  !   Length of each axis.
+  ! periodx, periody : bool
+  !   Periodic boundary conditions..
+  !
+  ! Returns
+  ! -------
+  ! maxlabel : int
+  !   Maximum label.
+  ! group : int array
+  !   Group ID for each point.
 
   implicit none
 
@@ -260,8 +385,27 @@ subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel
 
 end subroutine hoshen_kopelman_2d
 
+
 subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
   , periodz, maxlabel, group)
+
+  ! Hoshen-Kopelman algorithm in 3D.
+  !
+  ! Parameters
+  ! ----------
+  ! binmap : int array
+  !   Binary array.
+  ! nxgrid, nygrid, nzgrid : int
+  !   Length of each axis.
+  ! periodx, periody, periodz : bool
+  !   Periodic boundary conditions..
+  !
+  ! Returns
+  ! -------
+  ! maxlabel : int
+  !   Maximum label.
+  ! group : int array
+  !   Group ID for each point.
 
   implicit none
 
@@ -405,3 +549,144 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
   maxlabel = newmaxlabel
 
 end subroutine hoshen_kopelman_3d
+
+
+subroutine resolve_clashes(group1, group2, lengroup, labels, lenlabels, groupout)
+
+  ! Resolve group ID clashes.
+  !
+  ! Parameters
+  ! ----------
+  ! group1, group2 : int array
+  !   Group ID for the same points.
+  ! lengroup : int
+  !   Length of the group ID.
+  ! labels : int array
+  !   Label array.
+  ! lenlabels : int
+  !   Length of label array.
+  !
+  ! Returns
+  ! -------
+  ! groupout : int array
+  !   Output group ID for each point.
+
+  implicit none
+
+  integer, intent(in) :: lengroup, lenlabels
+  integer, intent(in) :: group1(lengroup), group2(lengroup), labels(lenlabels)
+  integer, intent(out) :: groupout(lengroup)
+
+  integer :: i, indout1, indout2, indout, labelsout1(lenlabels), labelsout2(lenlabels)
+
+  do i = 1, lengroup
+    if ((group1(i) .ne. 0) .and. (group2(i) .ne. 0)) then
+      call unionise(group1(i), group2(i), lenlabels, labels, indout1, indout2, indout)
+      labelsout1(indout1) = indout
+      labelsout1(indout2) = indout
+      labelsout1(group1(i)) = indout
+      labelsout1(group2(i)) = indout
+      groupout(i) = indout
+    else if ((group1(i) .ne. 0) .and. (group2(i) .eq. 0)) then
+      groupout(i) = group1(i)
+    else if ((group1(i) .eq. 0) .and. (group2(i) .ne. 0)) then
+      groupout(i) = group2(i)
+    end if
+  end do
+
+  call cascade_all(lenlabels, lenlabels, labelsout1, labelsout2)
+
+  do i = 1, lenlabels
+    if (groupout(i) .ne. 0) then
+      groupout(i) = labelsout2(groupout(i))
+    end if
+  end do
+
+end subroutine resolve_clashes
+
+
+subroutine sum4group(group, param, lengroup, maxlabel, sumparam)
+
+  ! Sum a parameter for each group ID.
+  !
+  ! Parameters
+  ! ----------
+  ! group : int array
+  !   Group IDs.
+  ! param : float array
+  !   Parameter values for each point in the grid.
+  ! lengroup : int
+  !   Length of the group ID.
+  ! maxlabel : int
+  !   Maximum label.
+  !
+  ! Returns
+  ! -------
+  ! sumparam : int array
+  !   Sum parameter values for each group.
+
+  implicit none
+  integer, parameter :: dp = kind(1.d0)
+
+  integer, intent(in) :: lengroup, maxlabel
+  integer, intent(in) :: group(lengroup)
+  real(kind=dp), intent(in) :: param(lengroup)
+  real(kind=dp), intent(out) :: sumparam(maxlabel)
+
+  integer :: i
+
+  do i = 1, maxlabel
+    sumparam(i) = 0.
+  end do
+
+  do i = 1, lengroup
+    if (group(i) .ne. 0) then
+      sumparam(group(i)) = sumparam(group(i)) + param(i)
+    end if
+  end do
+
+end subroutine sum4group
+
+
+subroutine avg4group(group, param, lengroup, maxlabel, avgparam)
+
+  ! Average for a parameter for each group ID.
+  !
+  ! Parameters
+  ! ----------
+  ! group : int array
+  !   Group IDs.
+  ! param : float array
+  !   Parameter values for each point in the grid.
+  ! lengroup : int
+  !   Length of the group ID.
+  ! maxlabel : int
+  !   Maximum label.
+  !
+  ! Returns
+  ! -------
+  ! avgparam : int array
+  !   Average parameter values for each group.
+
+  implicit none
+  integer, parameter :: dp = kind(1.d0)
+
+  integer, intent(in) :: lengroup, maxlabel
+  integer, intent(in) :: group(lengroup)
+  real(kind=dp), intent(in) :: param(lengroup)
+  real(kind=dp), intent(out) :: avgparam(maxlabel)
+
+  integer :: i, nlabels(maxlabel)
+  real(kind=dp) :: sumparam(maxlabel)
+
+  call sum4group(group, param, lengroup, maxlabel, sumparam)
+  call get_nlabels(maxlabel, lengroup, group, nlabels)
+
+
+  do i = 1, maxlabel
+    if (nlabels(i) .ne. 0) then
+      avgparam(i) = sumparam(i)/real(nlabels(i))
+    end if
+  end do
+
+end subroutine avg4group
