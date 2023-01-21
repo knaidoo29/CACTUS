@@ -3,6 +3,26 @@ include "pixel_1dto2d.f90"
 include "pixel_1dto3d.f90"
 
 
+subroutine find_maxint(len, array, maxvalue)
+
+  implicit none
+
+  integer, intent(in) :: len
+  integer, intent(in) :: array(len)
+  integer, intent(out) :: maxvalue
+  integer :: i
+
+  maxvalue = array(1)
+
+  do i = 2, len
+    if (array(i) .gt. maxvalue) then
+      maxvalue = array(i)
+    end if
+  end do
+
+end subroutine find_maxint
+
+
 subroutine cascade(lenlabels, labels, indexin, indexout)
 
   ! Cascade label index.
@@ -137,7 +157,7 @@ subroutine get_nlabels(maxlabel, lenlabels, labels, nlabels)
   end do
 
   do i = 1, lenlabels
-    if ((labels(i) .gt. 0) .and. (labels(i) .lt. maxlabel+1)) then
+    if ((labels(i) .ge. 1) .and. (labels(i) .le. maxlabel)) then
       nlabels(labels(i)) = nlabels(labels(i)) + 1
     end if
   end do
@@ -293,6 +313,8 @@ subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel
 
   do i = 1, nxgrid*nygrid
     group(i) = 0
+    labels(i) = 0
+    labelsout1(i) = 0
   end do
 
   do i = 1, nxgrid*nygrid
@@ -425,6 +447,8 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
 
   do i = 1, nxgrid*nygrid*nzgrid
     group(i) = 0
+    labels(i) = 0
+    labelsout1(i) = 0
   end do
 
   do i = 1, nxgrid*nygrid*nzgrid
@@ -551,7 +575,7 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
 end subroutine hoshen_kopelman_3d
 
 
-subroutine resolve_clashes(group1, group2, lengroup, labels, lenlabels, groupout)
+subroutine resolve_clashes(group1, group2, lengroup, labels, lenlabels, labelsout)
 
   ! Resolve group ID clashes.
   !
@@ -568,41 +592,112 @@ subroutine resolve_clashes(group1, group2, lengroup, labels, lenlabels, groupout
   !
   ! Returns
   ! -------
+  ! labelsout : int array
+  !   Label output.
+
+  implicit none
+
+  integer, intent(in) :: lengroup, lenlabels
+  integer, intent(in) :: group1(lengroup), group2(lengroup), labels(lenlabels)
+  integer, intent(out) :: labelsout(lenlabels)
+
+  integer :: i, indout1, indout2, indout, labelsout1(lenlabels)
+
+  do i = 1, lenlabels
+    labelsout1(i) = labels(i)
+  end do
+
+  do i = 1, lengroup
+    if ((group1(i) .ne. 0) .and. (group2(i) .ne. 0)) then
+      call unionise(group1(i), group2(i), lenlabels, labelsout1, indout1, indout2, indout)
+      labelsout1(indout1) = indout
+      labelsout1(indout2) = indout
+      labelsout1(group1(i)) = indout
+      labelsout1(group2(i)) = indout
+    end if
+  end do
+
+  call cascade_all(lenlabels, lenlabels, labelsout1, labelsout)
+
+end subroutine resolve_clashes
+
+
+subroutine resolve_labels(labels1, labels2, lenlabels, labelsout)
+
+  ! Resolve label ID clashes.
+  !
+  ! Parameters
+  ! ----------
+  ! labels1, labels2 : int array
+  !   Label array.
+  ! lenlabels : int
+  !   Length of label array.
+  !
+  ! Returns
+  ! -------
+  ! labelsout : int array
+  !   Label output.
+
+  implicit none
+
+  integer, intent(in) :: lenlabels
+  integer, intent(in) :: labels1(lenlabels), labels2(lenlabels)
+  integer, intent(out) :: labelsout(lenlabels)
+
+  integer :: i, indout1, indout2, indout, labelsout1(lenlabels)
+
+  do i = 1, lenlabels
+    labelsout1(i) = labels1(i)
+  end do
+
+  do i = 1, lenlabels
+    call unionise(labels1(i), labels2(i), lenlabels, labelsout1, indout1, indout2, indout)
+    labelsout1(indout1) = indout
+    labelsout1(indout2) = indout
+    labelsout1(labels1(i)) = indout
+    labelsout1(labels2(i)) = indout
+  end do
+
+  call cascade_all(lenlabels, lenlabels, labelsout1, labelsout)
+
+end subroutine resolve_labels
+
+
+subroutine relabel(group, lengroup, labels, lenlabels, groupout)
+
+  ! Resolve group ID clashes.
+  !
+  ! Parameters
+  ! ----------
+  ! group : int array
+  !   Group ID.
+  ! lengroup : int
+  !   Length of the group ID.
+  ! labels : int array
+  !   Label array.
+  ! lenlabels : int
+  !   Length of label array.
+  !
+  ! Returns
+  ! -------
   ! groupout : int array
   !   Output group ID for each point.
 
   implicit none
 
   integer, intent(in) :: lengroup, lenlabels
-  integer, intent(in) :: group1(lengroup), group2(lengroup), labels(lenlabels)
+  integer, intent(in) :: group(lengroup), labels(lenlabels)
   integer, intent(out) :: groupout(lengroup)
 
-  integer :: i, indout1, indout2, indout, labelsout1(lenlabels), labelsout2(lenlabels)
+  integer :: i
 
   do i = 1, lengroup
-    if ((group1(i) .ne. 0) .and. (group2(i) .ne. 0)) then
-      call unionise(group1(i), group2(i), lenlabels, labels, indout1, indout2, indout)
-      labelsout1(indout1) = indout
-      labelsout1(indout2) = indout
-      labelsout1(group1(i)) = indout
-      labelsout1(group2(i)) = indout
-      groupout(i) = indout
-    else if ((group1(i) .ne. 0) .and. (group2(i) .eq. 0)) then
-      groupout(i) = group1(i)
-    else if ((group1(i) .eq. 0) .and. (group2(i) .ne. 0)) then
-      groupout(i) = group2(i)
+    if (group(i) .ne. 0) then
+      groupout(i) = labels(group(i))
     end if
   end do
 
-  call cascade_all(lenlabels, lenlabels, labelsout1, labelsout2)
-
-  do i = 1, lenlabels
-    if (groupout(i) .ne. 0) then
-      groupout(i) = labelsout2(groupout(i))
-    end if
-  end do
-
-end subroutine resolve_clashes
+end subroutine relabel
 
 
 subroutine sum4group(group, param, lengroup, maxlabel, sumparam)
@@ -681,7 +776,6 @@ subroutine avg4group(group, param, lengroup, maxlabel, avgparam)
 
   call sum4group(group, param, lengroup, maxlabel, sumparam)
   call get_nlabels(maxlabel, lengroup, group, nlabels)
-
 
   do i = 1, maxlabel
     if (nlabels(i) .ne. 0) then
