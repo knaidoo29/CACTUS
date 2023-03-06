@@ -147,3 +147,87 @@ def mpi_groupfinder(binmap, MPI, periodic=True):
     else:
         groupID = groupID.reshape(nxgrid, nygrid, nzgrid)
     return groupID
+
+
+def get_ngroup(groupID):
+    """Get number of members for each group.
+
+    Parameters
+    ----------
+    group : int array
+        Group IDs.
+
+    Returns
+    -------
+    Ngroup : int array
+        Number of members in each group.
+    """
+    Ngroup = src.get_nlabels(maxlabel=np.max(groupID), lenlabels=len(groupID.flatten()),
+        labels=groupID.flatten())
+    return Ngroup
+
+
+def mpi_get_ngroup(groupID, MPI):
+    """Get number of members for each group.
+
+    Parameters
+    ----------
+    group : int array
+        Group IDs.
+    MPI : object
+        MPI object.
+
+    Returns
+    -------
+    Ngroup : int array
+        Number of members in each group.
+    """
+    maxID = MPI.max(groupID.flatten())
+    Ngroup = src.get_nlabels(maxlabel=maxID, lenlabels=len(groupID.flatten()),
+        labels=groupID.flatten())
+    Ngroup = MPI.sum(Ngroup)
+    return Ngroup
+
+
+def sum4group(groupID, param):
+    """Sum parameters for a given group.
+
+    Parameters
+    ----------
+    group : int array
+        Group IDs.
+    param : float array
+        Parameter values for each point in the grid.
+
+    Returns
+    -------
+    sumparam : int array
+        Sum parameter values for each group.
+    """
+    sumparam = src.sum4group(group=groupID.flatten(), param=param.flatten(),
+        lengroup=len(groupID.flatten()), maxlabel=np.max(maxlabel))
+    return sumparam
+
+
+def mpi_sum4group(groupID, param, MPI):
+    """Sum parameters for a given group.
+
+    Parameters
+    ----------
+    group : int array
+        Group IDs.
+    param : float array
+        Parameter values for each point in the grid.
+    MPI : object
+        MPI object.
+
+    Returns
+    -------
+    sumparam : int array
+        Sum parameter values for each group.
+    """
+    maxID = MPI.max(groupID.flatten())
+    sumparam = src.sum4group(group=groupID.flatten(), param=param.flatten(),
+        lengroup=len(groupID.flatten()), maxlabel=maxID)
+    sumparam = MPI.sum(sumparam)
+    return sumparam

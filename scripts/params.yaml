@@ -4,7 +4,7 @@ Cosmology:
 
 Siminfo:
   Boxsize: 75.
-  Ngrid: 128
+  Ngrid: 256
 
 Particles: Null
   # Type: NPZ #Gadget or NPZ
@@ -22,8 +22,8 @@ Particles: Null
   # # Gadget_Factor: 1
 
 Density: Null
-  # # Type: TSC
-  # # Saveas: dens_lf_TSC
+  # # # # Type: TSC
+  # # # # Saveas: dens_lf_TSC
   # Type: DTFE
   # MPI_Split: 4
   # Buffer_Type: periodic
@@ -32,14 +32,28 @@ Density: Null
   # Saveas: dens_lf_DTFE_
 
 CosmicWeb:
-  Density_Prefix: dens_lf_DTFE
+  Density_Prefix: dens_lf_DTFE_
   Density_Nfiles: 4
-  Type: NEXUS
-  R0: 0.5
-  Nmax: 7
-  logsmooth: [False, True, True]
-  virdens: 220
-  Output: cweb_nexus_
+  Type: Nexus
+  Nexus:
+    Signature: Null
+      # R0: 0.5
+      # Nmax: 7
+      # Logsmooth: [False, True, True]
+      # Output: cweb_nexus_sig_
+    Thresholds:
+      SigFile:
+        Prefix: cweb_nexus_sig_
+        Nfiles: 4
+      Clusters:
+        Minvirdens: 220
+        Nbins: 100 #make as default, without necessitating definition
+        Evaluate: 20 # ditto
+      Filaments:
+        Nbins: 100
+      Walls:
+        Nbins: 100
+      Output: nexus_cweb
 
 
 # Image:

@@ -2,9 +2,14 @@ import os
 import time
 
 import numpy as np
+import matplotlib.pylab as plt
+
+from scipy.interpolate import interp1d
 
 import fiesta
+import magpie
 import shift
+import cactus
 
 from . import files
 from . import read
@@ -64,6 +69,7 @@ class CaCTus:
     def __init__(self, MPI):
         # Global variables
         self.MPI = MPI
+        self.FFT = False
         self.ERROR = False
 
         # Time Variables
@@ -128,7 +134,37 @@ class CaCTus:
         # CosmicWeb
         self.cosmicweb = {
             "Density_Prefix": None,
-            "Density_Nfiles": None
+            "Density_Nfiles": None,
+            "Type": None,
+            "Nexus": {
+                "Signature": {
+                    "_Run": False,
+                    "R0": None,
+                    "Nmax": None,
+                    "Logsmooth": None,
+                    "Output": None
+                },
+                "Thresholds": {
+                    "_Run": False,
+                    "SigFile": {
+                        "Prefix": None,
+                        "Nfiles": None
+                    },
+                    "Clusters": {
+                        "Minvirdens": None,
+                        "nbins": 100,
+                        "Eval": None,
+                    },
+                    "Filaments": {
+                        "nbins": 100,
+                    },
+                    "Walls": {
+                        "nbins": 100,
+                    },
+                    "Output": None
+                }
+            },
+            "cweb": None,
         }
 
 
@@ -141,6 +177,7 @@ class CaCTus:
         if self.ERROR is True:
             exit()
 
+
     def _check_particle_files(self):
         for fname in self.particles["Fnames"]:
             if files.check_exist(fname) is False:
@@ -148,6 +185,7 @@ class CaCTus:
                 self.ERROR = True
             else:
                 self.ERROR = False
+
 
     def _construct_particle_files(self):
         if self.particles["Filelist"] is not None:
@@ -281,6 +319,7 @@ class CaCTus:
 
             self.what2run["density"] = True
 
+        # Read CosmicWeb info
         if params["CosmicWeb"] is not None:
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" CosmicWeb:")
@@ -295,29 +334,77 @@ class CaCTus:
             self.what2run["cosmicweb"] = True
 
             self.cosmicweb["Type"] = params["CosmicWeb"]["Type"]
+            self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" - Type\t\t\t=", self.cosmicweb["Type"])
 
-            if self.cosmicweb["Type"] == "NEXUS":
-                self.cosmicweb["R0"] = params["CosmicWeb"]["R0"]
-                self.cosmicweb["Nmax"] = params["CosmicWeb"]["Nmax"]
-                self.cosmicweb["logsmooth"] = params["CosmicWeb"]["logsmooth"]
-                self.cosmicweb["virdens"] = params["CosmicWeb"]["virdens"]
-                self.cosmicweb["Output"] = params["CosmicWeb"]["Output"]
+            if self.cosmicweb["Type"] == "Nexus":
 
-                self.MPI.mpi_print_zero(" - R0\t\t\t=", self.cosmicweb["R0"])
-                self.MPI.mpi_print_zero(" - Nmax\t\t\t=", self.cosmicweb["Nmax"])
-                self.MPI.mpi_print_zero(" - logsmooth\t\t=", self.cosmicweb["logsmooth"])
-                self.MPI.mpi_print_zero(" - virdens\t\t=", self.cosmicweb["virdens"])
-                self.MPI.mpi_print_zero(" - Output\t\t=", self.cosmicweb["Output"])
+                if params["CosmicWeb"]["Nexus"]["Signature"] is not None:
 
-        #
-        # if params["Image"] is not None:
-        #     self.MPI.mpi_print_zero()
-        #     self.MPI.mpi_print_zero(" Image:")
-        #
-        #     self.MPI.mpi_print_zero()
-        #     self.MPI.mpi_print_zero(" - Density_Prefix\t=", self.cosmicweb["Density_Prefix"])
-        #
+                    self.cosmicweb["Nexus"]["Signature"]["_Run"] = True
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" - Signature")
+
+                    self.cosmicweb["Nexus"]["Signature"]["R0"] = params["CosmicWeb"]["Nexus"]["Signature"]["R0"]
+                    self.cosmicweb["Nexus"]["Signature"]["Nmax"] = params["CosmicWeb"]["Nexus"]["Signature"]["Nmax"]
+                    self.cosmicweb["Nexus"]["Signature"]["Logsmooth"] = params["CosmicWeb"]["Nexus"]["Signature"]["Logsmooth"]
+                    self.cosmicweb["Nexus"]["Signature"]["Output"] = params["CosmicWeb"]["Nexus"]["Signature"]["Output"]
+
+                    self.MPI.mpi_print_zero(" -- R0\t\t\t=", self.cosmicweb["Nexus"]["Signature"]["R0"])
+                    self.MPI.mpi_print_zero(" -- Nmax\t\t=", self.cosmicweb["Nexus"]["Signature"]["Nmax"])
+                    self.MPI.mpi_print_zero(" -- Logsmooth\t\t=", self.cosmicweb["Nexus"]["Signature"]["Logsmooth"])
+                    self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Signature"]["Output"])
+
+                if params["CosmicWeb"]["Nexus"]["Thresholds"] is not None:
+
+                    self.cosmicweb["Nexus"]["Thresholds"]["_Run"] = True
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" - Thresholds")
+
+                    self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["SigFile"]["Prefix"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["SigFile"]["Nfiles"]
+
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Nbins"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Evaluate"]
+
+                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Nbins"]
+
+                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Nbins"]
+
+                    self.cosmicweb["Nexus"]["Thresholds"]["Output"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Output"]
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- SigFile")
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" --- Prefix\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"])
+                    self.MPI.mpi_print_zero(" --- Nfiles\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"])
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- Clusters")
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" --- Minvirdens\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"])
+                    self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"])
+                    self.MPI.mpi_print_zero(" --- Evaluate\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"])
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- Filaments")
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- Walls")
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"])
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Output"])
 
 
     def read_paramfile(self, yaml_fname):
@@ -419,7 +506,6 @@ class CaCTus:
         self.time["Particle_End"] = time.time()
 
 
-
     def _save_dens(self):
         inout.save_dens(self.density["Saveas"], self.MPI.rank, self.siminfo["x3D"], self.siminfo["y3D"], self.siminfo["z3D"],
                         self.density["dens"], self.siminfo["Ngrid"], self.siminfo["Boxsize"])
@@ -454,7 +540,7 @@ class CaCTus:
 
 
     def _load_dens(self):
-        self.ERROR = inout.check_dens(self.cosmicweb["Density_Prefix"], 0, self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI)
+        self.ERROR = inout.check_file(self.cosmicweb["Density_Prefix"], 0, self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI)
         self._break4error()
         dens_ind = np.arange(self.cosmicweb["Density_Nfiles"])
         dens_ind = self.MPI.split_array(dens_ind)
@@ -477,6 +563,36 @@ class CaCTus:
         self.density["dens"] = dens
 
 
+    def _load_sig(self):
+        self.ERROR = inout.check_file(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"], 0, self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI)
+        self._break4error()
+        sig_ind = np.arange(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"])
+        sig_ind = self.MPI.split_array(sig_ind)
+        if len(sig_ind) != 0:
+            for i in range(0, len(sig_ind)):
+                Ngrid, Boxsize, _x3D, _y3D, _z3D, _Sc, _Sf, _Sw = inout.load_nexus_sig(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"], sig_ind[i])
+                if i == 0:
+                    x3D = _x3D.flatten()
+                    y3D = _y3D.flatten()
+                    z3D = _z3D.flatten()
+                    Sc = _Sc.flatten()
+                    Sf = _Sf.flatten()
+                    Sw = _Sw.flatten()
+                else:
+                    x3D = np.concatenate([x3D, _x3D.flatten()])
+                    y3D = np.concatenate([y3D, _y3D.flatten()])
+                    z3D = np.concatenate([z3D, _z3D.flatten()])
+                    Sc = np.concatenate([Sc, _Sc.flatten()])
+                    Sf = np.concatenate([Sf, _Sf.flatten()])
+                    Sw = np.concatenate([Sw, _Sw.flatten()])
+        else:
+            x3D, y3D, z3D, Sc, Sf, Sw = None, None, None, None, None, None
+        Sc = self.SBX.distribute_grid3D(x3D, y3D, z3D, Sc)
+        Sf = self.SBX.distribute_grid3D(x3D, y3D, z3D, Sf)
+        Sw = self.SBX.distribute_grid3D(x3D, y3D, z3D, Sw)
+        return Sc, Sf, Sw
+
+
     def _average_mass_per_cell(self):
         Omega_m = self.cosmo["Omega_m"]
         boxsize = self.siminfo["Boxsize"]
@@ -493,6 +609,111 @@ class CaCTus:
         return mass
 
 
+    def _get_histogram(self, x, minval, maxval, ngrid):
+        """Returns binned (histograms) from an input data set.
+
+        Parameters
+        ----------
+        x : array
+            X-values to be binned.
+        minval, maxval : float
+            Minimum and maximum values.
+        ngrid : int
+            Grid dimensions.
+
+        Returns
+        -------
+        hx, hy : array
+            Histogram grid (hx) and binned values (hy).
+        """
+        pixID = magpie.pixels.pos2pix_cart1d(x, maxval-minval, ngrid, origin=minval)
+        hy = magpie.pixels.bin_pix(pixID, ngrid)
+        hy = self.MPI.sum(hy)
+        hxedges, hx = shift.cart.grid1D(maxval-minval, ngrid, origin=minval)
+        if self.MPI.rank == 0:
+            return hx, hy
+        else:
+            return None, None
+
+
+    def _get_cdf(self, x, minval, maxval, ngrid):
+        hx, hy = self._get_histogram(x, minval, maxval, ngrid)
+        if self.MPI.rank == 0:
+            dx = hx[1]-hx[0]
+            cdf_x = np.zeros(len(hx)+1)
+            cdf_x[1:] = hx + 0.5*dx
+            cdf_x[0] = hx[0] - 0.5*dx
+            cdf_y = np.zeros(len(cdf_x))
+            cdf_y[1:] = np.cumsum(hy)
+            cdf_y /= cdf_y[-1]
+            return cdf_x, cdf_y
+        else:
+            return None, None
+
+
+    def _bin_mass_by_signature(self, mass, logS, minlogS, maxlogS, ngrid):
+        """Returns binned (histograms) from an input data set.
+
+        Parameters
+        ----------
+        mass : array
+            Mass of pixel.
+        logS : array
+            Signature value.
+        minlogS, maxlogS : float
+            Minimum and maximum logS values.
+        ngrid : int
+            Grid dimensions.
+
+        Returns
+        -------
+        logSx, M : array
+            Histogram grid (logSc) and binned values (M).
+        """
+        pixID = magpie.pixels.pos2pix_cart1d(logS, maxlogS-minlogS, ngrid, origin=minlogS)
+        M = magpie.pixels.bin_pix(pixID, ngrid, weights=mass)
+        M = self.MPI.sum(M)
+        if self.MPI.rank == 0:
+            M = np.cumsum(M[::-1])[::-1]
+        logSx_edges, logSx = shift.cart.grid1D(maxlogS-minlogS, ngrid, origin=minlogS)
+        if self.MPI.rank == 0:
+            return logSx_edges[:-1], M
+        else:
+            return None, None
+
+
+    def _get_dM_dlogS(self, mass, logS, minlogS, maxlogS, ngrid):
+        """Returns binned (histograms) from an input data set.
+
+        Parameters
+        ----------
+        mass : array
+            Mass of pixel.
+        logS : array
+            Signature value.
+        minlogS, maxlogS : float
+            Minimum and maximum logS values.
+        ngrid : int
+            Grid dimensions.
+
+        Returns
+        -------
+        logSx, dM : array
+            Differential of Mass vs logS.
+        """
+        logSx, M = self._bin_mass_by_signature(mass, logS, minlogS, maxlogS, ngrid)
+        if self.MPI.rank == 0:
+            dM = fiesta.maths.dfdx(logSx, M)**2.
+            return logSx, dM
+        else:
+            return None, None
+
+
+    def _save_cweb(self):
+        if self.cosmicweb["Type"] == "Nexus":
+            fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"]+str(self.MPI.rank)+".npz"
+            np.savez(fname, cweb=self.cosmicweb["cweb"])
+
 
     def calculate_cosmicweb(self):
         self.MPI.mpi_print_zero()
@@ -501,8 +722,283 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.wait()
         self.time["CosmicWeb_Start"] = time.time()
+
         self.MPI.mpi_print_zero(" - Loading density")
         self._load_dens()
+
+        if self.cosmicweb["Type"] == "Nexus":
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" - Running NEXUS")
+
+            if self.cosmicweb["Nexus"]["Signature"]["_Run"] is True:
+
+                self.MPI.mpi_print_zero(" - Initialising FFT object")
+                Ngrids = [self.siminfo["Ngrid"], self.siminfo["Ngrid"], self.siminfo["Ngrid"]]
+                self.FFT = self.MPI.mpi_fft_start(Ngrids)
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" - Calculating NEXUS Signatures")
+
+                cond = np.where(np.array(self.cosmicweb["Nexus"]["Signature"]["Logsmooth"]) == False)[0]
+                if len(cond) > 0:
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- Run Multiscale Hessian on density")
+                    self.MPI.mpi_print_zero()
+                    _Sc, _Sf, _Sw = cactus.nexus.mpi_get_nexus_sig(self.density["dens"],
+                        self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI, self.FFT,
+                        logsmooth=False, R0=self.cosmicweb["Nexus"]["Signature"]["R0"],
+                        Nmax=self.cosmicweb["Nexus"]["Signature"]["Nmax"],
+                        verbose=True, verbose_prefix=' --- ')
+                if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][0] == False:
+                    Sc = _Sc
+                if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][1] == False:
+                    Sf = _Sf
+                if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][2] == False:
+                    Sw = _Sw
+                cond = np.where(np.array(self.cosmicweb["Nexus"]["Signature"]["Logsmooth"]) == True)[0]
+                if len(cond) > 0:
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- Run Multiscale Hessian on log10(density)")
+                    self.MPI.mpi_print_zero()
+                    _Sc, _Sf, _Sw = cactus.nexus.mpi_get_nexus_sig(self.density["dens"],
+                        self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI, self.FFT,
+                        logsmooth=True, R0=self.cosmicweb["Nexus"]["Signature"]["R0"],
+                        Nmax=self.cosmicweb["Nexus"]["Signature"]["Nmax"],
+                        verbose=True, verbose_prefix=' --- ')
+                if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][0] == True:
+                    Sc = _Sc
+                if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][1] == True:
+                    Sf = _Sf
+                if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][2] == True:
+                    Sw = _Sw
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -- Saving NEXUS signature: "+self.cosmicweb["Nexus"]["Signature"]["Output"]+"{0-%i}.npz"%(self.MPI.size-1))
+                prefix = self.cosmicweb["Nexus"]["Signature"]["Output"]
+                inout.save_nexus_sig(prefix, self.MPI.rank, self.siminfo["x3D"], self.siminfo["y3D"],
+                    self.siminfo["z3D"], Sc, Sf, Sw, self.siminfo["Ngrid"], self.siminfo["Boxsize"])
+
+            if self.cosmicweb["Nexus"]["Thresholds"]["_Run"] is True:
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" - Calculating Environment Thresholds")
+
+                if self.cosmicweb["Nexus"]["Signature"]["_Run"] is False:
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- Load NEXUS signature: "+self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"]+"{0-%i}.npz"%(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"]-1))
+
+                    Sc, Sf, Sw = self._load_sig()
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -- Convert density to mass")
+
+                mass = self._density2mass()
+                mass_total = self.MPI.sum(np.sum(mass))
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -- Computing Cluster Thresholds")
+
+                cond = np.where(Sc.flatten() != 0.)[0]
+
+                NumSc = self.MPI.sum(len(cond))
+
+                if self.MPI.rank != 0:
+                    NumSc = 0.
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Pixels with Sc != 0: %.2f %%" % (100.*NumSc/(self.siminfo["Ngrid"]**3.)))
+
+                minSc = self.MPI.min(Sc.flatten()[cond])
+                maxSc = self.MPI.max(Sc.flatten()[cond])
+
+                minlogSc, maxlogSc = np.log10(minSc), np.log10(maxSc)
+                logSc = np.log10(Sc.flatten()[cond])
+
+                self.MPI.mpi_print_zero(" --- log10(Sc) range: [%.2f, %.2f]" % (minlogSc, maxlogSc))
+
+                binlen = self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"]
+                cdf_x, cdf_y = self._get_cdf(logSc, minlogSc, maxlogSc, binlen)
+
+                percent = np.linspace(0., 1., self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"]+2)[1:-1]
+
+                if self.MPI.rank == 0:
+                    f = interp1d(cdf_y, cdf_x)
+                    logSc_percent = f(percent)
+                    self.MPI.send(logSc_percent, tag=11)
+                else:
+                    logSc_percent = self.MPI.recv(0, tag=11)
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Running GroupFinder at %i scales" % self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"])
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- #Num\t| min[log10(Sc)]\t| Pixels Frac.\t| Ngroups \t| Cluster Frac.\t|")
+
+                f_good_clusters = []
+
+                for i in range(0, len(logSc_percent)):
+
+                    logSc_val = logSc_percent[i]
+
+                    binmap = np.zeros(np.shape(Sc))
+                    cond = np.where(Sc > 10.**logSc_val)
+                    binmap[cond] = 1.
+
+                    N_pix_nonzero = self.MPI.sum(np.sum(binmap))
+
+                    if self.MPI.rank == 0:
+                        f_pix_nonzero = N_pix_nonzero/(self.siminfo["Ngrid"]**3.)
+                        str_val = " --- %i/%i\t| %.4f \t\t| %.4f %%\t|" % (i+1, len(logSc_percent), logSc_val, 100.*f_pix_nonzero)
+
+                    groupID = cactus.groups.mpi_groupfinder(binmap, self.MPI)
+                    maxID = self.MPI.max(groupID.flatten())
+
+                    if self.MPI.rank == 0:
+                        str_val += " %i \t\t|" % maxID
+
+                    group_N = cactus.groups.mpi_get_ngroup(groupID, self.MPI)
+                    group_mass = cactus.groups.mpi_sum4group(groupID, mass, self.MPI)
+
+                    if self.MPI.rank == 0:
+                        dV = (self.siminfo["Boxsize"]/self.siminfo["Ngrid"])**3.
+                        group_vol = group_N*dV
+                        group_dens = group_mass/group_vol
+                        cond = np.where(group_dens > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"])[0]
+                        fval_good_clusters = len(cond)/len(group_mass)
+                        str_val += " %.4f %%\t|" % (100.*fval_good_clusters)
+                        f_good_clusters.append(fval_good_clusters)
+                    else:
+                        str_val = ""
+
+                    self.MPI.mpi_print_zero(str_val)
+
+                if self.MPI.rank == 0:
+                    f_good_clusters = np.array(f_good_clusters)
+                    f = interp1d(f_good_clusters, logSc_percent)
+                    logSc_threshold = f(0.5)
+                    self.MPI.send(logSc_threshold, tag=11)
+                else:
+                    logSc_threshold = self.MPI.recv(0, tag=11)
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Threshold log10(Sc) = %.4f" % logSc_threshold)
+
+                self.cosmicweb["cweb"] = np.zeros(np.shape(self.density["dens"]), dtype="int")
+                cond = np.where(Sc >= 10.**logSc_threshold)
+                self.cosmicweb["cweb"][cond] = 1
+
+                ## might need to edit this.
+                Sf[cond] = 0.
+                Sw[cond] = 0.
+
+                Nc = self.MPI.sum(len(cond[0]))
+                Mc = self.MPI.sum(np.sum(mass[cond]))
+
+                self.MPI.mpi_print_zero()
+                if self.MPI.rank == 0:
+                    Cluster_Vol_frac = Nc/(self.siminfo["Ngrid"]**3)
+                    Cluster_Mass_frac = Mc/mass_total
+                    self.MPI.mpi_print_zero(" --- Clusters Volume Fraction = %.4f %%" % (100.*Cluster_Vol_frac))
+                    self.MPI.mpi_print_zero(" --- Clusters Mass Fraction   = %.4f %%" % (100.*Cluster_Mass_frac))
+
+                # Remove groups that are too small, a few points.
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -- Computing Filament Thresholds")
+
+                cond = np.where(Sf.flatten() != 0.)[0]
+
+                NumSf = self.MPI.sum(len(cond))
+
+                if self.MPI.rank != 0:
+                    NumSf = 0.
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Pixels with Sf != 0: %.2f %%" % (100.*NumSf/(self.siminfo["Ngrid"]**3.)))
+
+                minSf = self.MPI.min(Sf.flatten()[cond])
+                maxSf = self.MPI.max(Sf.flatten()[cond])
+
+                minlogSf, maxlogSf = np.log10(minSf), np.log10(maxSf)
+                logSf = np.log10(Sf.flatten()[cond])
+
+                logSf, dM2 = self._get_dM_dlogS(mass.flatten()[cond], logSf, minlogSf, maxlogSf, self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
+
+                if self.MPI.rank == 0:
+                    ind = np.argmax(dM2)
+                    logSf_threshold = logSf[ind]
+                    self.MPI.send(logSf_threshold, tag=11)
+                else:
+                    logSf_threshold = self.MPI.recv(0, tag=11)
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Threshold log10(Sf) = %.4f" % logSf_threshold)
+
+                cond = np.where((Sf >= 10.**logSf_threshold) & (self.cosmicweb["cweb"] == 0))
+                self.cosmicweb["cweb"][cond] = 2
+                ## might need to edit this.
+                Sw[cond] = 0.
+
+                Nf = self.MPI.sum(len(cond[0]))
+                Mf = self.MPI.sum(np.sum(mass[cond]))
+
+                self.MPI.mpi_print_zero()
+                if self.MPI.rank == 0:
+                    Filament_Vol_frac = Nf/(self.siminfo["Ngrid"]**3)
+                    Filament_Mass_frac = Mf/mass_total
+                    self.MPI.mpi_print_zero(" --- Filament Volume Fraction = %.4f %%" % (100.*Filament_Vol_frac))
+                    self.MPI.mpi_print_zero(" --- Filament Mass Fraction   = %.4f %%" % (100.*Filament_Mass_frac))
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -- Computing Wall Thresholds")
+
+                cond = np.where(Sw.flatten() != 0.)[0]
+
+                NumSw = self.MPI.sum(len(cond))
+
+                if self.MPI.rank != 0:
+                    NumSw = 0.
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Pixels with Sw != 0: %.2f %%" % (100.*NumSw/(self.siminfo["Ngrid"]**3.)))
+
+                minSw = self.MPI.min(Sw.flatten()[cond])
+                maxSw = self.MPI.max(Sw.flatten()[cond])
+
+                minlogSw, maxlogSw = np.log10(minSw), np.log10(maxSw)
+                logSw = np.log10(Sw.flatten()[cond])
+
+                logSw, dM2 = self._get_dM_dlogS(mass.flatten()[cond], logSw, minlogSw, maxlogSw, self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"])
+
+                if self.MPI.rank == 0:
+                    ind = np.argmax(dM2)
+                    logSw_threshold = logSw[ind]
+                    self.MPI.send(logSw_threshold, tag=11)
+                else:
+                    logSw_threshold = self.MPI.recv(0, tag=11)
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Threshold log10(Sw) = %.4f" % logSw_threshold)
+
+                cond = np.where((Sw >= 10.**logSw_threshold) & (self.cosmicweb["cweb"] == 0))
+                self.cosmicweb["cweb"][cond] = 3
+
+                Nw = self.MPI.sum(len(cond[0]))
+                Mw = self.MPI.sum(np.sum(mass[cond]))
+
+                self.MPI.mpi_print_zero()
+                if self.MPI.rank == 0:
+                    Wall_Vol_frac = Nw/(self.siminfo["Ngrid"]**3)
+                    Wall_Mass_frac = Mw/mass_total
+                    self.MPI.mpi_print_zero(" --- Wall Volume Fraction     = %.4f %%" % (100.*Wall_Vol_frac))
+                    self.MPI.mpi_print_zero(" --- Wall Mass Fraction       = %.4f %%" % (100.*Wall_Mass_frac))
+
+                self.MPI.mpi_print_zero()
+                fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
+                self.MPI.mpi_print_zero(" -- Saving cosmicweb environments to "+fname)
+
+                self._save_cweb()
 
         self.time["CosmicWeb_End"] = time.time()
 
