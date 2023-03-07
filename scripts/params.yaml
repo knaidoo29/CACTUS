@@ -49,11 +49,14 @@ CosmicWeb:
         Minvirdens: 220
         Nbins: 100 #make as default, without necessitating definition
         Evaluate: 20 # ditto
+        Minpix: 10
       Filaments:
         Nbins: 100
+        Minpix: 10
       Walls:
         Nbins: 100
-      Output: nexus_cweb
+        Minpix: 10
+      Output: cweb_nexus_env_
 
 
 # Image:

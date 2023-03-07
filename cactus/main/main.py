@@ -154,12 +154,15 @@ class CaCTus:
                         "Minvirdens": None,
                         "nbins": 100,
                         "Eval": None,
+                        "Minpix": 10,
                     },
                     "Filaments": {
                         "nbins": 100,
+                        "Minpix": 10,
                     },
                     "Walls": {
                         "nbins": 100,
+                        "Minpix": 10,
                     },
                     "Output": None
                 }
@@ -369,10 +372,13 @@ class CaCTus:
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"]
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Nbins"]
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Evaluate"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minpix"]
 
                     self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Nbins"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minpix"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Minpix"]
 
                     self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Nbins"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minpix"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Minpix"]
 
                     self.cosmicweb["Nexus"]["Thresholds"]["Output"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Output"]
 
@@ -390,18 +396,21 @@ class CaCTus:
                     self.MPI.mpi_print_zero(" --- Minvirdens\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"])
                     self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"])
                     self.MPI.mpi_print_zero(" --- Evaluate\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"])
+                    self.MPI.mpi_print_zero(" --- Minpix\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"])
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Filaments")
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
+                    self.MPI.mpi_print_zero(" --- Minpix\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minpix"])
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Walls")
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"])
+                    self.MPI.mpi_print_zero(" --- Minpix\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minpix"])
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Output"])
@@ -888,9 +897,30 @@ class CaCTus:
                 cond = np.where(Sc >= 10.**logSc_threshold)
                 self.cosmicweb["cweb"][cond] = 1
 
-                ## might need to edit this.
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Remove spurious groups with less than %i members" % self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"])
+
+                binmap = np.zeros(np.shape(self.cosmicweb["cweb"]))
+                binmap[cond] = 1.
+
+                groupID = cactus.groups.mpi_groupfinder(binmap, self.MPI)
+                group_N = cactus.groups.mpi_get_ngroup(groupID, self.MPI)
+                group_N = self.MPI.broadcast(group_N)
+
+                mask = np.zeros(len(group_N), dtype='int')
+                cond = np.where(group_N > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"])[0]
+                mask[cond] = 1
+
+                cond = np.where(groupID != 0.)
+                self.cosmicweb["cweb"][cond] = mask[groupID[cond]-1]
+
+                cond = np.where(self.cosmicweb["cweb"] == 1)
+
                 Sf[cond] = 0.
                 Sw[cond] = 0.
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Summaries Cluster Properties:")
 
                 Nc = self.MPI.sum(len(cond[0]))
                 Mc = self.MPI.sum(np.sum(mass[cond]))
@@ -899,10 +929,8 @@ class CaCTus:
                 if self.MPI.rank == 0:
                     Cluster_Vol_frac = Nc/(self.siminfo["Ngrid"]**3)
                     Cluster_Mass_frac = Mc/mass_total
-                    self.MPI.mpi_print_zero(" --- Clusters Volume Fraction = %.4f %%" % (100.*Cluster_Vol_frac))
-                    self.MPI.mpi_print_zero(" --- Clusters Mass Fraction   = %.4f %%" % (100.*Cluster_Mass_frac))
-
-                # Remove groups that are too small, a few points.
+                    self.MPI.mpi_print_zero(" ---- Volume Fraction = %.4f %%" % (100.*Cluster_Vol_frac))
+                    self.MPI.mpi_print_zero(" ---- Mass Fraction   = %.4f %%" % (100.*Cluster_Mass_frac))
 
                 self.MPI.mpi_print_zero()
                 self.MPI.mpi_print_zero(" -- Computing Filament Thresholds")
@@ -937,8 +965,30 @@ class CaCTus:
 
                 cond = np.where((Sf >= 10.**logSf_threshold) & (self.cosmicweb["cweb"] == 0))
                 self.cosmicweb["cweb"][cond] = 2
-                ## might need to edit this.
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Remove spurious groups with less than %i members" % self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minpix"])
+
+                binmap = np.zeros(np.shape(self.cosmicweb["cweb"]))
+                binmap[cond] = 1.
+
+                groupID = cactus.groups.mpi_groupfinder(binmap, self.MPI)
+                group_N = cactus.groups.mpi_get_ngroup(groupID, self.MPI)
+                group_N = self.MPI.broadcast(group_N)
+
+                mask = np.zeros(len(group_N), dtype='int')
+                cond = np.where(group_N > self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minpix"])[0]
+                mask[cond] = 2
+
+                cond = np.where(groupID != 0.)
+                self.cosmicweb["cweb"][cond] = mask[groupID[cond]-1]
+
+                cond = np.where(self.cosmicweb["cweb"] == 2)
+
                 Sw[cond] = 0.
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Summaries Filament Properties:")
 
                 Nf = self.MPI.sum(len(cond[0]))
                 Mf = self.MPI.sum(np.sum(mass[cond]))
@@ -947,8 +997,8 @@ class CaCTus:
                 if self.MPI.rank == 0:
                     Filament_Vol_frac = Nf/(self.siminfo["Ngrid"]**3)
                     Filament_Mass_frac = Mf/mass_total
-                    self.MPI.mpi_print_zero(" --- Filament Volume Fraction = %.4f %%" % (100.*Filament_Vol_frac))
-                    self.MPI.mpi_print_zero(" --- Filament Mass Fraction   = %.4f %%" % (100.*Filament_Mass_frac))
+                    self.MPI.mpi_print_zero(" ---- Volume Fraction = %.4f %%" % (100.*Filament_Vol_frac))
+                    self.MPI.mpi_print_zero(" ---- Mass Fraction   = %.4f %%" % (100.*Filament_Mass_frac))
 
                 self.MPI.mpi_print_zero()
                 self.MPI.mpi_print_zero(" -- Computing Wall Thresholds")
@@ -984,6 +1034,28 @@ class CaCTus:
                 cond = np.where((Sw >= 10.**logSw_threshold) & (self.cosmicweb["cweb"] == 0))
                 self.cosmicweb["cweb"][cond] = 3
 
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Remove spurious groups with less than %i members" % self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"])
+
+                binmap = np.zeros(np.shape(self.cosmicweb["cweb"]))
+                binmap[cond] = 1.
+
+                groupID = cactus.groups.mpi_groupfinder(binmap, self.MPI)
+                group_N = cactus.groups.mpi_get_ngroup(groupID, self.MPI)
+                group_N = self.MPI.broadcast(group_N)
+
+                mask = np.zeros(len(group_N), dtype='int')
+                cond = np.where(group_N > self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minpix"])[0]
+                mask[cond] = 3
+
+                cond = np.where(groupID != 0.)
+                self.cosmicweb["cweb"][cond] = mask[groupID[cond]-1]
+
+                cond = np.where(self.cosmicweb["cweb"] == 3)
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" --- Summaries Wall Properties:")
+
                 Nw = self.MPI.sum(len(cond[0]))
                 Mw = self.MPI.sum(np.sum(mass[cond]))
 
@@ -991,8 +1063,8 @@ class CaCTus:
                 if self.MPI.rank == 0:
                     Wall_Vol_frac = Nw/(self.siminfo["Ngrid"]**3)
                     Wall_Mass_frac = Mw/mass_total
-                    self.MPI.mpi_print_zero(" --- Wall Volume Fraction     = %.4f %%" % (100.*Wall_Vol_frac))
-                    self.MPI.mpi_print_zero(" --- Wall Mass Fraction       = %.4f %%" % (100.*Wall_Mass_frac))
+                    self.MPI.mpi_print_zero(" ---- Volume Fraction     = %.4f %%" % (100.*Wall_Vol_frac))
+                    self.MPI.mpi_print_zero(" ---- Mass Fraction       = %.4f %%" % (100.*Wall_Mass_frac))
 
                 self.MPI.mpi_print_zero()
                 fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
