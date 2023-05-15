@@ -6,7 +6,7 @@ Siminfo:
   Boxsize: 75.
   Ngrid: 256
 
-Particles: Null
+#Particles: Null
   # Type: NPZ #Gadget or NPZ
   # Filelist: Null #lv_fname_npz.txt
   # Fileprefix: levy_flight_sim_
@@ -21,7 +21,7 @@ Particles: Null
   # # Nfiles: 4
   # # Gadget_Factor: 1
 
-Density: Null
+#Density: Null
   # # # # Type: TSC
   # # # # Saveas: dens_lf_TSC
   # Type: DTFE
@@ -36,11 +36,11 @@ CosmicWeb:
   Density_Nfiles: 4
   Type: Nexus
   Nexus:
-    Signature: Null
-      # R0: 0.5
-      # Nmax: 7
-      # Logsmooth: [False, True, True]
-      # Output: cweb_nexus_sig_
+    # Signature:
+    #   R0: 0.5
+    #   Nmax: 1
+    #   Logsmooth: [False, True, True]
+    #   Output: cweb_nexus_sig2_
     Thresholds:
       SigFile:
         Prefix: cweb_nexus_sig_
@@ -49,13 +49,13 @@ CosmicWeb:
         Minvirdens: 220
         Nbins: 100 #make as default, without necessitating definition
         Evaluate: 20 # ditto
-        Minpix: 10
+        Minpix: 100
       Filaments:
         Nbins: 100
-        Minpix: 10
+        Minpix: 100
       Walls:
         Nbins: 100
-        Minpix: 10
+        Minpix: 100
       Output: cweb_nexus_env_
 
 
