@@ -137,6 +137,7 @@ class CaCTus:
             "Density_Prefix": None,
             "Density_Nfiles": None,
             "Type": None,
+            "FilterRadius": None,
             "Nexus": {
                 "Signature": {
                     "_Run": False,
@@ -356,8 +357,11 @@ class CaCTus:
             self.what2run["cosmicweb"] = True
 
             self.cosmicweb["Type"] = params["CosmicWeb"]["Type"]
+            self.cosmicweb["FilterRadius"] = float(params["CosmicWeb"]["FilterRadius"])
+
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" - Type\t\t\t=", self.cosmicweb["Type"])
+            self.MPI.mpi_print_zero(" - FilterRadius\t\t=", self.cosmicweb["FilterRadius"])
 
             if self.cosmicweb["Type"] == "Nexus":
 
@@ -377,7 +381,6 @@ class CaCTus:
                     self.MPI.mpi_print_zero(" -- Nmax\t\t=", self.cosmicweb["Nexus"]["Signature"]["Nmax"])
                     self.MPI.mpi_print_zero(" -- Logsmooth\t\t=", self.cosmicweb["Nexus"]["Signature"]["Logsmooth"])
                     self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Signature"]["Output"])
-
 
                 if self._check_param_key(params["CosmicWeb"]["Nexus"], "Thresholds"):
 
@@ -617,6 +620,19 @@ class CaCTus:
             x3D, y3D, z3D, dens = None, None, None, None
         self.density["dens"] = self.SBX.distribute_grid3D(x3D, y3D, z3D, dens)
 
+    def _dens_top_hat_filter(self, radius):
+        kx3d, ky3d, kz3d = shift.cart.mpi_kgrid3D(self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
+        kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
+        kmag = kmag.flatten()
+        dk = shift.cart.fft3D(self.density["dens"], self.siminfo["Boxsize"])
+        kshape = np.shape(dk)
+        dk = dk.flatten()
+        cond = np.where(kmag > 2.*np.pi/radius)[0]
+        dk[cond] = 0. +1j*0.
+        #dk = dk.reshape(kshape)
+        self.density["dens"] = shift.cart.ifft3D(dk, self.siminfo["Boxsize"])
+
+
     # Cosmic Web Functions --------------------------------------------------- #
 
     def _load_sig(self):
@@ -798,8 +814,6 @@ class CaCTus:
         Ngrids = [self.siminfo["Ngrid"], self.siminfo["Ngrid"], self.siminfo["Ngrid"]]
         self.FFT = self.MPI.mpi_fft_start(Ngrids)
 
-        
-
         cond = np.where(np.array(self.cosmicweb["Nexus"]["Signature"]["Logsmooth"]) == False)[0]
 
         if len(cond) > 0:
@@ -923,12 +937,12 @@ class CaCTus:
         cond = np.where(self.cosmicweb["web_flag"] == web_flag)
 
         if web_flag == 3:
-            #Sf[cond] = 0.
-            #Sw[cond] = 0.
+            Sf[cond] = 0.
+            Sw[cond] = 0.
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" -> Summarise Cluster Properties:")
         elif web_flag == 2:
-            #Sw[cond] = 0.
+            Sw[cond] = 0.
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" -> Summarise Filament Properties:")
         else:
@@ -1003,93 +1017,9 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" -> {:>8} | {:>16} | {:>16} | {:>16} | {:>16} | {:>16} | {:>16} |".format(*["N", "min[log10(Sc)]", "Pixel Frac.", "Ngroups", "Cluster Frac.", "Avg. Dens.", "Avg. Mass"]))
         self.MPI.mpi_print_zero(" -> {:>8} | {:>16} | {:>16} | {:>16} | {:>16} | {:>16} | {:>16} |".format(*["-"*8, "-"*16, "-"*16, "-"*16, "-"*16, "-"*16, "-"*16]))
-
-        def frac_of_good(logSc_val, i):
-            rows = []
-            binmap = np.zeros(np.shape(Sc))
-            cond = np.where(Sc > 10.**logSc_val)
-            binmap[cond] = 1.
-
-            N_pix_nonzero = self.MPI.sum(np.sum(binmap))
-
-            if self.MPI.rank == 0:
-                f_pix_nonzero = N_pix_nonzero/(self.siminfo["Ngrid"]**3.)
-                rows.append(str(i+1))
-                rows.append(logSc_val)
-                rows.append(f_pix_nonzero)
-
-            groupID = groups.mpi_groupfinder(binmap, self.MPI)
-            maxID = self.MPI.max(groupID.flatten())
-
-            if self.MPI.rank == 0:
-                rows.append(maxID)
-
-            group_N = groups.mpi_get_ngroup(groupID, self.MPI)
-            group_mass = groups.mpi_sum4group(groupID, self.density["mass"], self.MPI)
-            self._average_mass_per_cell()
-            if self.MPI.rank == 0:
-                # plt.hist(np.log10(group_N), 100)
-                # plt.axvline(np.log10(self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"]))
-                # plt.yscale('log')
-                # plt.show()
-                dV = (self.siminfo["Boxsize"]/self.siminfo["Ngrid"])**3.
-                group_vol = group_N*dV
-                group_dens = group_mass/group_vol
-                cond = np.where((group_N >= self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"]))[0]
-                # plt.scatter(group_dens[cond], group_mass[cond], s=1)
-                # plt.axhline(self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"], color='C0')
-                # #plt.axvline(self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"], color='C0')
-                # plt.show()
-                # cond1 = np.where(#(group_mass[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"]) & #)[0]# &
-                #     (group_dens[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"]))[0]
-
-                cond1 = np.where(group_dens[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"])[0]
-                if len(cond) == 0:
-                    fval_good_clusters = 0.
-                else:
-                    #fval_good_clusters = len(cond)/len(group_mass)
-                    fval_good_clusters = len(cond[cond1])/len(cond)
-                rows.append(fval_good_clusters)
-                #f_good_clusters.append(fval_good_clusters)
-                rows.append(np.mean(group_dens))
-                rows.append(np.mean(group_mass))
-                self.MPI.mpi_print_zero(" -> {:>8} | {:>16.4} | {:>16.4%} | {:>16} | {:>16.4%} | {:>16.4} | {:>16.4} |".format(*rows))
-            else:
-                fval_good_clusters = None
-
-            fval_good_clusters = self.MPI.broadcast(fval_good_clusters)
-
-            return fval_good_clusters
-
-        frac_gc_max = 1.
-        frac_gc_min = 0.
-
-        half_logSc = (minlogSc + maxlogSc)/2.
-
-        i = 0
-        frac_gc_half = frac_of_good(half_logSc, i)
-
-        while abs(frac_gc_half - 0.5) > 1e-2:
-            i += 1
-            if frac_gc_half < 0.5:
-                minlogSc = half_logSc
-            else:
-                maxlogSc = half_logSc
-
-            half_logSc = (minlogSc + maxlogSc)/2.
-
-            frac_gc_half = frac_of_good(half_logSc, i)
-
-        logSc_threshold = half_logSc
-
         #
-        # f_good_clusters = []
-        #
-        # for i in range(0, len(logSc_percent)):
+        # def frac_of_good(logSc_val, i):
         #     rows = []
-        #
-        #     logSc_val = logSc_percent[i]
-        #
         #     binmap = np.zeros(np.shape(Sc))
         #     cond = np.where(Sc > 10.**logSc_val)
         #     binmap[cond] = 1.
@@ -1098,7 +1028,7 @@ class CaCTus:
         #
         #     if self.MPI.rank == 0:
         #         f_pix_nonzero = N_pix_nonzero/(self.siminfo["Ngrid"]**3.)
-        #         rows.append(str(i+1)+"/"+str(len(logSc_percent)))
+        #         rows.append(str(i+1))
         #         rows.append(logSc_val)
         #         rows.append(f_pix_nonzero)
         #
@@ -1127,38 +1057,124 @@ class CaCTus:
         #         # cond1 = np.where(#(group_mass[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"]) & #)[0]# &
         #         #     (group_dens[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"]))[0]
         #
-        #         cond1 = np.where(group_dens[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"])[0]
+        #         cond1 = np.where(group_dens[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"])[0]
         #         if len(cond) == 0:
         #             fval_good_clusters = 0.
         #         else:
         #             #fval_good_clusters = len(cond)/len(group_mass)
         #             fval_good_clusters = len(cond[cond1])/len(cond)
         #         rows.append(fval_good_clusters)
-        #         f_good_clusters.append(fval_good_clusters)
+        #         #f_good_clusters.append(fval_good_clusters)
         #         rows.append(np.mean(group_dens))
         #         rows.append(np.mean(group_mass))
         #         self.MPI.mpi_print_zero(" -> {:>8} | {:>16.4} | {:>16.4%} | {:>16} | {:>16.4%} | {:>16.4} | {:>16.4} |".format(*rows))
-        #
-        # if self.MPI.rank == 0:
-        #     f_good_clusters = np.array(f_good_clusters)
-        #     f = interp1d(f_good_clusters, logSc_percent)
-        #     if f_good_clusters.max() < 0.5:
-        #         logSc_threshold = logSc_percent.max()
-        #     elif logSc_percent.min() > 0.5:
-        #         logSc_threshold = logSc_percent.min()
         #     else:
-        #         logSc_threshold = f(0.5)
-        #     self.MPI.send(logSc_threshold, tag=11)
-        # else:
-        #     logSc_threshold = self.MPI.recv(0, tag=11)
+        #         fval_good_clusters = None
+        #
+        #     fval_good_clusters = self.MPI.broadcast(fval_good_clusters)
+        #
+        #     return fval_good_clusters
+        #
+        # frac_gc_max = 1.
+        # frac_gc_min = 0.
+        #
+        # half_logSc = (minlogSc + maxlogSc)/2.
+        #
+        # i = 0
+        # frac_gc_half = frac_of_good(half_logSc, i)
+        #
+        # while abs(frac_gc_half - 0.5) > 1e-2:
+        #     i += 1
+        #     if frac_gc_half < 0.5:
+        #         minlogSc = half_logSc
+        #     else:
+        #         maxlogSc = half_logSc
+        #
+        #     half_logSc = (minlogSc + maxlogSc)/2.
+        #
+        #     frac_gc_half = frac_of_good(half_logSc, i)
+        #
+        # logSc_threshold = half_logSc
 
+        f_good_clusters = []
+
+        for i in range(0, len(logSc_percent)):
+            rows = []
+
+            logSc_val = logSc_percent[i]
+
+            binmap = np.zeros(np.shape(Sc))
+            cond = np.where(Sc > 10.**logSc_val)
+            binmap[cond] = 1.
+
+            N_pix_nonzero = self.MPI.sum(np.sum(binmap))
+
+            if self.MPI.rank == 0:
+                f_pix_nonzero = N_pix_nonzero/(self.siminfo["Ngrid"]**3.)
+                rows.append(str(i+1)+"/"+str(len(logSc_percent)))
+                rows.append(logSc_val)
+                rows.append(f_pix_nonzero)
+
+            groupID = groups.mpi_groupfinder(binmap, self.MPI)
+            maxID = self.MPI.max(groupID.flatten())
+
+            if self.MPI.rank == 0:
+                rows.append(maxID)
+
+            group_N = groups.mpi_get_ngroup(groupID, self.MPI)
+            group_mass = groups.mpi_sum4group(groupID, self.density["mass"], self.MPI)
+            self._average_mass_per_cell()
+            if self.MPI.rank == 0:
+                # plt.hist(np.log10(group_N), 100)
+                # plt.axvline(np.log10(self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"]))
+                # plt.yscale('log')
+                # plt.show()
+                dV = (self.siminfo["Boxsize"]/self.siminfo["Ngrid"])**3.
+                group_vol = group_N*dV
+                group_dens = group_mass/group_vol
+                cond = np.where((group_N >= self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"]))[0]
+                # plt.scatter(group_dens[cond], group_mass[cond], s=1)
+                # plt.axhline(self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"], color='C0')
+                # #plt.axvline(self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"], color='C0')
+                # plt.show()
+                # cond1 = np.where(#(group_mass[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"]) & #)[0]# &
+                #     (group_dens[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvirdens"]))[0]
+
+                cond1 = np.where(group_dens[cond] > self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"])[0]
+                if len(cond) == 0:
+                    fval_good_clusters = 0.
+                else:
+                    #fval_good_clusters = len(cond)/len(group_mass)
+                    fval_good_clusters = len(cond[cond1])/len(cond)
+                rows.append(fval_good_clusters)
+                f_good_clusters.append(fval_good_clusters)
+                rows.append(np.mean(group_dens))
+                rows.append(np.mean(group_mass))
+                self.MPI.mpi_print_zero(" -> {:>8} | {:>16.4} | {:>16.4%} | {:>16} | {:>16.4%} | {:>16.4} | {:>16.4} |".format(*rows))
+
+        if self.MPI.rank == 0:
+            f_good_clusters = np.array(f_good_clusters)
+            f = interp1d(f_good_clusters, logSc_percent)
+            if f_good_clusters.max() < 0.5:
+                logSc_threshold = logSc_percent.max()
+            elif logSc_percent.min() > 0.5:
+                logSc_threshold = logSc_percent.min()
+            else:
+                logSc_threshold = f(0.5)
+            self.MPI.send(logSc_threshold, tag=11)
+        else:
+            logSc_threshold = self.MPI.recv(0, tag=11)
         #logSc_threshold == 1507
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" -> Threshold log10(Sc) = %.4f" % logSc_threshold)
 
-        self.cosmicweb["web_flag"] = np.zeros(np.shape(self.density["dens"]), dtype="int")
+        self.cosmicweb["web_flag"] = np.zeros(np.shape(Sc), dtype="int")
+
+        self.MPI.mpi_print_zero(np.shape(Sc), np.shape(self.cosmicweb["web_flag"]))
+
         cond = np.where(Sc >= 10.**logSc_threshold)
+        self.MPI.mpi_print_zero(cond)
         self.cosmicweb["web_flag"][cond] = 3
 
         self._remove_spurious_web_flag(3, self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minpix"])
@@ -1276,6 +1292,8 @@ class CaCTus:
         self.MPI.mpi_print_zero(" -> Loading density")
         self._load_dens()
         self._norm_dens()
+        if self.cosmicweb["FilterRadius"] != 0.:
+            self._dens_top_hat_filter(self.cosmicweb["FilterRadius"])
 
         if self.cosmicweb["Type"] == "Nexus":
             self._run_nexus()

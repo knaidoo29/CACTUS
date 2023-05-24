@@ -115,11 +115,6 @@ def get_nexus_sig(dens, boxsize, logsmooth=True, R0=0.5, Nmax=7, verbose=True,
     # construct fourier grid
     kx3d, ky3d, kz3d = shift.cart.kgrid3D(boxsize, ngrid)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
-    # Top Hat filter 0.22
-    densk = shift.cart.ifft3D(dens, boxsize)
-    cond = np.where(kmag > 2*np.pi/0.22)
-    densk[cond] = 0 + 0j
-    dens = shift.cart.fft3D(densk, boxsize)
     # determine mean of the field and logarithm
     dmean = np.mean(dens)
     if logsmooth:

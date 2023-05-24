@@ -3,7 +3,7 @@ import os.path
 import numpy as np
 
 import cactus
-from cactus.ext import mpiutils
+import mpiutils
 
 MPI = mpiutils.MPI()
 
