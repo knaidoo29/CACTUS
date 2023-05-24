@@ -14,6 +14,23 @@ exts.append(Extension(name='cactus.src.pixel_1dto2d', sources=['cactus/src/pixel
 exts.append(Extension(name='cactus.src.pixel_1dto3d', sources=['cactus/src/pixel_1dto3d.f90']))
 exts.append(Extension(name='cactus.src.union_finder', sources=['cactus/src/union_finder.f90']))
 
+exts.append(Extension(name='cactus.ext.fiesta.src.matrix', sources=['cactus/ext/fiesta/src/matrix.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.polygon', sources=['cactus/ext/fiesta/src/polygon.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.delaunay2d', sources=['cactus/ext/fiesta/src/delaunay2d.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.polyhedron', sources=['cactus/ext/fiesta/src/polyhedron.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.delaunay3d', sources=['cactus/ext/fiesta/src/delaunay3d.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.differentiate', sources=['cactus/ext/fiesta/src/differentiate.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.grid', sources=['cactus/ext/fiesta/src/grid.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.part2grid_wei', sources=['cactus/ext/fiesta/src/part2grid_wei.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.part2grid_pix', sources=['cactus/ext/fiesta/src/part2grid_pix.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.part2grid_2d', sources=['cactus/ext/fiesta/src/part2grid_2d.f90']))
+exts.append(Extension(name='cactus.ext.fiesta.src.part2grid_3d', sources=['cactus/ext/fiesta/src/part2grid_3d.f90']))
+
+exts.append(Extension(name='cactus.ext.magpie.src.pixel_utils', sources=['cactus/ext/magpie/src/pixel_utils.f90']))
+exts.append(Extension(name='cactus.ext.magpie.src.pixel_1dto2d', sources=['cactus/ext/magpie/src/pixel_1dto2d.f90']))
+exts.append(Extension(name='cactus.ext.magpie.src.pixel_1dto3d', sources=['cactus/ext/magpie/src/pixel_1dto3d.f90']))
+exts.append(Extension(name='cactus.ext.magpie.src.pixel_binbyindex', sources=['cactus/ext/magpie/src/pixel_binbyindex.f90']))
+
 setup(name = 'cactus',
       version = '0.0.0',
       description       = "Cosmic web Classification Toolkit",

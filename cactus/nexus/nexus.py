@@ -1,6 +1,6 @@
 import numpy as np
-import magpie
-import shift
+
+from ..ext import shift
 
 from scipy.interpolate import interp1d
 
@@ -115,6 +115,11 @@ def get_nexus_sig(dens, boxsize, logsmooth=True, R0=0.5, Nmax=7, verbose=True,
     # construct fourier grid
     kx3d, ky3d, kz3d = shift.cart.kgrid3D(boxsize, ngrid)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
+    # Top Hat filter 0.22
+    densk = shift.cart.ifft3D(dens, boxsize)
+    cond = np.where(kmag > 2*np.pi/0.22)
+    densk[cond] = 0 + 0j
+    dens = shift.cart.fft3D(densk, boxsize)
     # determine mean of the field and logarithm
     dmean = np.mean(dens)
     if logsmooth:
@@ -332,55 +337,3 @@ def mpi_get_nexus_sig(dens, ngrid, boxsize, MPI, FFT, logsmooth=True, R0=0.5,
     Sf = Sf.reshape(dshape)
     Sw = Sw.reshape(dshape)
     return Sc, Sf, Sw
-
-
-#     cweb = np.zeros(len(Sc))
-#     # Determine Mass in Cells
-#     den = dens.flatten()
-#     dx = boxsize/ngrid
-#     mass = dens * dx**3.
-#     # get cluster environment
-#     virialised = np.zeros(len(dens))
-#     cond = np.where(np.log10(dens) >= np.log10(virdens))[0]
-#     virialised[cond] = 1.
-#     cond = np.where(Sc > 0.)[0]
-#     logSc_cut = np.log10(Sc[cond])
-#     xlogSc_min = np.min(np.log10(Sc[cond]))
-#     xlogSc_max = np.max(np.log10(Sc[cond]))
-#     xlogSc = magpie.grids.grid1d(xlogsc_max-xlogsc_min, 100,
-#                                  origin=xlogsc_min, return_edges=False)
-#     pixID = magpie.pixels.pos2pix_cart1d(logSc_cut),
-#                                          xlogsc_max-xlogsc_min, 100,
-#                                          origin=xlogsc_min))
-#     hist_Sc_all = magpie.pixels.bin_pix(pixID, 100, weights=np.ones(len(pixID)))
-#     hist_Sc_vir = magpie.pixels.bin_pix(pixID, 100, weights=virialised[cond])
-#     y_Sc_vir = np.cumsum(hist_Sc_vir[::-1])[::-1]
-#     y_Sc_all = np.cumsum(hist_Sc_all[::-1])[::-1]
-#     y_Sc = y_Sc_vir/y_Sc_all
-#     interp_y_Sc = interp1d(y_Sc, xlogSc)
-#     Sc_threshold = 10.**interpcdf(0.5)
-#     cond = np.where(Sc >= Sc_lim)[0]
-#     cweb[cond] = 3.
-#     # get filament environment
-#     cond = np.where((Sf > 0.) & (cweb == 0.))[0]
-#     logSf_cut = np.log10(Sf[cond])
-#     mass_Sf_cut = mass[cond]
-#     xlogSf_min = np.min(logSf_cut)
-#     xlogSf_max = np.max(logSf_cut)
-#     xlogSf = magpie.grids.grid1d(xlogSf_max-xlogSf_min, 100, origin=xlogSf_min,
-#                                  return_edges=False)
-# pixID = magpie.pixels.pos2pix_cart1d(logSf_cut, xlogSf_max-log_Sf_min, 100, origin=log_Sf_min)
-# W_Sf = magpie.pixels.bin_pix(pixID, 100, weights=mass_Sf_cut)
-#
-# M_Sf = np.cumsum(W_Sf[::-1])[::-1]
-# #M_Sf /= np.max(M_Sf)
-# #M_Sf = 1 - M_Sf
-#
-# plt.plot(logSf_grid, M_Sf)
-# plt.show()
-#
-# M2_Sf = M_Sf**2.
-#
-# import TheoryCL
-#
-# DeltaM2_Sf = abs(TheoryCL.maths.numerical_differentiate(logSf_grid, M2_Sf))

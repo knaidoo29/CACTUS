@@ -57,15 +57,3 @@ CosmicWeb:
         Nbins: 100
         Minpix: 100
       Output: cweb_nexus_env_
-
-
-# Image:
-#   Load: dens_gadget_
-#   Nfiles: 4
-#   Key: dens
-#   Axis: x
-#   Center: 250.
-#   Width: 10.
-#   Origin: 0.
-#   Boxsize: 500.
-#   output: image

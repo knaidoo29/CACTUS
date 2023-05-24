@@ -1,5 +1,5 @@
 import numpy as np
-import shift
+from ..ext import shift
 
 from .. import maths
 
