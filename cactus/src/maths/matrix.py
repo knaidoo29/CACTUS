@@ -3,24 +3,6 @@ import numpy as np
 from .. import fortran_src as fsrc
 
 
-def _get_eig_2by2(Mxx, Mxy, Myx, Myy):
-    """Returns the eigenvalues for a single 2x2 matrix.
-
-    Parameters
-    ----------
-    Mxx, Mxy, Myx, Myy : float
-        Value of the 2x2 matrix.
-
-    Returns
-    -------
-    eig : array
-        Eigenvalues for single matrix.
-    """
-    m = np.array([Mxx,Mxy,Myx,Myy])
-    eig = fsrc.eig2by2(m=m)
-    return eig
-
-
 def get_eig_2by2(Mxx, Mxy, Myx, Myy):
     """Returns the eigenvalues for a 2x2 matrices.
 
@@ -35,29 +17,11 @@ def get_eig_2by2(Mxx, Mxy, Myx, Myy):
         Eigenvalues for single or multiple matrices.
     """
     if np.isscalar(Mxx):
-        eig = _get_eig_2by2(Mxx,Mxy,Myx,Myy)
+        eig1, eig2 = fsrc.eig2by2_single(m00=Mxx, m01=Mxy, m10=Myx, m11=Myy)
     else:
-        eig = np.array([_get_eig_2by2(Mxx[i],Mxy[i],Myx[i],Myy[i])
-                        for i in range(0, len(Mxx))])
-    return eig
-
-
-def _get_eig_3by3(Mxx, Mxy, Mxz, Myy, Myz, Mzz):
-    """Returns the eigenvalues for a single symmetric 3x3 matrix.
-
-    Parameters
-    ----------
-    Mxx, Mxy, Mxz, Myy, Myz, Mzz : float
-        Value of the symmetric 3x3 matrix.
-
-    Returns
-    -------
-    eig : array
-        Eigenvalues for single matrix.
-    """
-    m = np.array([Mxx,Mxy,Mxz,Mxy,Myy,Myz,Mxz,Myz,Mzz])
-    eig = fsrc.symeig3by3(m=m)
-    return eig
+        eig1, eig2 = fsrc.eig2by2_array(m00=Mxx, m01=Mxy, m10=Myx, m11=Myy,
+            mlen=len(Mxx))
+    return eig1, eig2
 
 
 def get_eig_3by3(Mxx, Mxy, Mxz, Myy, Myz, Mzz):
@@ -74,9 +38,9 @@ def get_eig_3by3(Mxx, Mxy, Mxz, Myy, Myz, Mzz):
         Eigenvalues for single or multiple matrices.
     """
     if np.isscalar(Mxx):
-        eig = _get_eig_3by3(Mxx,Mxy,Mxz,Myy,Myz,Mzz)
+        eig1, eig2, eig3 = fsrc.sym_eig3by3_single(m00=Mxx, m01=Mxy, m02=Mxz,
+            m11=Myy, m12=Myz, m22=Mzz)
     else:
-        eig = np.array([_get_eig_3by3(Mxx[i],Mxy[i],Mxz[i],
-                                      Myy[i],Myz[i],Mzz[i])
-                        for i in range(0, len(Mxx))])
-    return eig
+        eig1, eig2, eig3 = fsrc.sym_eig3by3_array(m00=Mxx, m01=Mxy, m02=Mxz,
+            m11=Myy, m12=Myz, m22=Mzz, mlen=len(Mxx))
+    return eig1, eig2, eig3

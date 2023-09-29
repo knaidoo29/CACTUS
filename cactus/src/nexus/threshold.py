@@ -210,7 +210,7 @@ def get_clust_threshold(Sc_lims, Num_mlim, Num_mlim_dlim):
         The cluster significance threshold.
     """
     f = interp1d(Num_mlim_dlim/Num_mlim, np.log10(Sc_lims))
-    Sc_lim = 10.**f(0.5))
+    Sc_lim = 10.**f(0.5)
     return Sc_lim
 
 

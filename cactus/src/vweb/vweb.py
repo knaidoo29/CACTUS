@@ -4,7 +4,7 @@ from ...ext import shift
 from .. import maths
 
 
-def run_vweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True):
+def run_vweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True, prefix=''):
     """Returns the V-Web cosmic web classification from the input velocity
     field. Assuming periodic boundary conditions.
 
@@ -20,6 +20,8 @@ def run_vweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True):
         Threshold for V-Web eigenvalue classifications
     verbose : bool, optional
         Determines whether to print updates about V-Web calculation.
+    prefix : str, optional
+        Optional prefix before any print statements.
 
     Returns
     -------
@@ -31,13 +33,13 @@ def run_vweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True):
     ngrid = vshape[0]
     # get grids
     if verbose:
-        print('Constructing real and fourier grids.')
+        print(prefix + 'Constructing real and fourier grids.')
     x3d, y3d, z3d = shift.cart.grid3D(boxsize, ngrid)
     kx3d, ky3d, kz3d = shift.cart.kgrid3D(boxsize, ngrid)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
     # smooth fields
     if verbose:
-        print('Forward FFT and Smoothing velocity fields in fourier space.')
+        print(prefix + 'Forward FFT and Smoothing velocity fields in fourier space.')
     vxk = shift.cart.fft3D(vxf, boxsize)
     vxk *= shift.cart.convolve_gaussian(kmag, smooth)
     vyk = shift.cart.fft3D(vyf, boxsize)
@@ -46,31 +48,37 @@ def run_vweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True):
     vzk *= shift.cart.convolve_gaussian(kmag, smooth)
     # differentiate in Fourier space
     if verbose:
-        print('Differentiating velocity fields in fourier space.')
+        print(prefix + 'Differentiating velocity fields in fourier space and run backward FFT.')
     vxxk = shift.cart.dfdk(kx3d, vxk)
-    vxyk = shift.cart.dfdk(ky3d, vxk)
-    vxzk = shift.cart.dfdk(kz3d, vxk)
-    vyxk = shift.cart.dfdk(kx3d, vyk)
-    vyyk = shift.cart.dfdk(ky3d, vyk)
-    vyzk = shift.cart.dfdk(kz3d, vyk)
-    vzxk = shift.cart.dfdk(kx3d, vzk)
-    vzyk = shift.cart.dfdk(ky3d, vzk)
-    vzzk = shift.cart.dfdk(kz3d, vzk)
-    # return differential of vector fields in real space
-    if verbose:
-        print('Backward FFT of differential velocity fields.')
     vxx = shift.cart.ifft3D(vxxk, boxsize)
+    del vxxk
+    vxyk = shift.cart.dfdk(ky3d, vxk)
     vxy = shift.cart.ifft3D(vxyk, boxsize)
+    del vxyk
+    vxzk = shift.cart.dfdk(kz3d, vxk)
     vxz = shift.cart.ifft3D(vxzk, boxsize)
+    del vxzk
+    vyxk = shift.cart.dfdk(kx3d, vyk)
     vyx = shift.cart.ifft3D(vyxk, boxsize)
+    del vyxk
+    vyyk = shift.cart.dfdk(ky3d, vyk)
     vyy = shift.cart.ifft3D(vyyk, boxsize)
+    del vyyk
+    vyzk = shift.cart.dfdk(kz3d, vyk)
     vyz = shift.cart.ifft3D(vyzk, boxsize)
+    del vyzk
+    vzxk = shift.cart.dfdk(kx3d, vzk)
     vzx = shift.cart.ifft3D(vzxk, boxsize)
+    del vzxk
+    vzyk = shift.cart.dfdk(ky3d, vzk)
     vzy = shift.cart.ifft3D(vzyk, boxsize)
+    del vzyk
+    vzzk = shift.cart.dfdk(kz3d, vzk)
     vzz = shift.cart.ifft3D(vzzk, boxsize)
+    del vzzk
     # Calculate reduced velocity tensor matrix
     if verbose:
-        print('Constructing reduced shear tensor.')
+        print(prefix + 'Constructing reduced shear tensor.')
     Sigma_xx = vxx + vxx
     Sigma_xy = vxy + vyx
     Sigma_xz = vxz + vzx
@@ -94,20 +102,17 @@ def run_vweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True):
     Sigma_yz = Sigma_yz.flatten()
     Sigma_zz = Sigma_zz.flatten()
     if verbose:
-        print('Calculating eigenvalues.')
-    eigs = maths.get_eig_3by3(Sigma_xx,Sigma_xy,Sigma_xz,
-                              Sigma_yy,Sigma_yz,Sigma_zz)
+        print(prefix + 'Calculating eigenvalues.')
+    eigs = maths.get_eig_3by3(Sigma_xx, Sigma_xy, Sigma_xz, Sigma_yy, Sigma_yz,
+        Sigma_zz)
     if verbose:
-        print('Determining cosmic web environments.')
+        print(prefix + 'Determining cosmic web environments.')
     cweb = np.zeros(len(eigs))
-    cond = np.where((eigs[:,2]>=threshold) & (eigs[:,1]<threshold)
-                    & (eigs[:,0]<threshold))[0]
+    cond = np.where((eigs[:,2]>=threshold) & (eigs[:,1]<threshold) & (eigs[:,0]<threshold))[0]
     cweb[cond] = 1.
-    cond = np.where((eigs[:,2]>=threshold) & (eigs[:,1]>=threshold)
-                    & (eigs[:,0]<threshold))[0]
+    cond = np.where((eigs[:,2]>=threshold) & (eigs[:,1]>=threshold) & (eigs[:,0]<threshold))[0]
     cweb[cond] = 2.
-    cond = np.where((eigs[:,2]>=threshold) & (eigs[:,1]>=threshold)
-                    & (eigs[:,0]>=threshold))[0]
+    cond = np.where((eigs[:,2]>=threshold) & (eigs[:,1]>=threshold) & (eigs[:,0]>=threshold))[0]
     cweb[cond] = 3.
     cweb = cweb.reshape(vshape)
     return cweb
