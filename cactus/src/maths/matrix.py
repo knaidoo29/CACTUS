@@ -1,6 +1,6 @@
 import numpy as np
 
-from .. import src
+from .. import fortran_src as fsrc
 
 
 def _get_eig_2by2(Mxx, Mxy, Myx, Myy):
@@ -17,7 +17,7 @@ def _get_eig_2by2(Mxx, Mxy, Myx, Myy):
         Eigenvalues for single matrix.
     """
     m = np.array([Mxx,Mxy,Myx,Myy])
-    eig = src.eig2by2(m=m)
+    eig = fsrc.eig2by2(m=m)
     return eig
 
 
@@ -56,7 +56,7 @@ def _get_eig_3by3(Mxx, Mxy, Mxz, Myy, Myz, Mzz):
         Eigenvalues for single matrix.
     """
     m = np.array([Mxx,Mxy,Mxz,Mxy,Myy,Myz,Mxz,Myz,Mzz])
-    eig = src.symeig3by3(m=m)
+    eig = fsrc.symeig3by3(m=m)
     return eig
 
 

@@ -5,7 +5,7 @@
 |               |                                       |
 |---------------|---------------------------------------|
 | Author        | Krishna Naidoo                        |               
-| Version       | 0.0.2                                 |
+| Version       | 1.0.0                                 |
 | Repository    | https://github.com/knaidoo29/cactus   |
 | Documentation | https://cactus-doc.readthedocs.io/    |
 

@@ -1,10 +1,10 @@
 import numpy as np
-from ..ext import shift
+from ...ext import shift
 
 from .. import maths
 
 
-def run_vweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True):
+def run_tweb(vxf, vyf, vzf, boxsize, smooth, threshold, verbose=True):
     """Returns the V-Web cosmic web classification from the input velocity
     field. Assuming periodic boundary conditions.
 

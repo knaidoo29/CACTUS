@@ -1,0 +1,177 @@
+import numpy as np
+
+from ...ext import shift
+from .. import maths, filters
+from .. import fortran_src as fsrc
+
+
+def get_theta(x):
+    """Heaviside function with center at 0.
+
+    Parameters
+    ----------
+    x : float or array
+        Array.
+    """
+    return np.heaviside(x, 0.)
+
+
+def get_Theta(x):
+    """Positive linear function.
+
+    Parameters
+    ----------
+    x : float or array
+        Array.
+    """
+    return x*get_theta(x)
+
+
+def get_nexus_signature(eig1, eig2, eig3):
+    """Nexus+ strenght S.
+
+    Parameters
+    ----------
+    eig1, eig2, eig3 : float or arrays
+        Eigenvalues with sorted eigenvalues, i.e. eig1 < eig2 < eig3.
+
+    Returns
+    -------
+    Sc, Sf, Sw : array
+        Signature for clusters (Sc), filament (Sf), walls (Sw).
+    """
+    Ic = abs(eig3/eig1)
+    If = abs(eig2/eig1)*get_Theta(1-abs(eig3/eig1))
+    Iw = get_Theta(1-abs(eig2/eig1))*get_Theta(1-abs(eig3/eig1))
+    Sc = Ic*abs(eig3)*get_theta(-eig1)*get_theta(-eig2)*get_theta(-eig3)
+    Sf = If*abs(eig2)*get_theta(-eig1)*get_theta(-eig2)
+    Sw = Iw*abs(eig1)*get_theta(-eig1)
+    return Sc, Sf, Sw
+
+
+
+def Hessian3D(f, Rn, boxsize):
+    """Compute Hessian matrix for the field f.
+
+    Parameters
+    ----------
+    f : 3darray
+        3D field.
+    boxsize : float
+        Size of the box.
+    Rn : float
+        Gaussian kernel smoothing radius.
+
+    Returns
+    -------
+    Hxx, Hxy, Hxz, Hyy, Hyz, Hzz : ndarrays
+        Hessian matrix elements.
+    """
+    # Create fourier mode grid
+    ngrid = len(f)
+    kx3d, ky3d, kz3d = shift.cart.kgrid3D(boxsize, ngrid)
+    kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
+    # Forward FFT
+    fk = shift.cart.fft3D(f, boxsize)
+    # Computer Hessian xx
+    Hkxx = (Rn**2.) * shift.cart.dfdk2(kx3d, fk)
+    Hxx = shift.cart.ifft3D(Hkxx, boxsize)
+    # Computer Hessian xy
+    Hkxy = (Rn**2.) * shift.cart.dfdk2(kx3d, fk, k2=ky3d)
+    Hxy = shift.cart.ifft3D(Hkxy, boxsize)
+    # Computer Hessian xz
+    Hkxz = (Rn**2.) * shift.cart.dfdk2(kx3d, fk, k2=kz3d)
+    Hxz = shift.cart.ifft3D(Hkxz, boxsize)
+    # Computer Hessian yy
+    Hkyy = (Rn**2.) * shift.cart.dfdk2(ky3d, fk)
+    Hyy = shift.cart.ifft3D(Hkyy, boxsize)
+    # Computer Hessian yz
+    Hkyz = (Rn**2.) * shift.cart.dfdk2(ky3d, fk, k2=kz3d)
+    Hyz = shift.cart.ifft3D(Hkyz, boxsize)
+    # Computer Hessian zz
+    Hkzz = (Rn**2.) * shift.cart.dfdk2(kz3d, fk)
+    Hzz = shift.cart.ifft3D(Hkzz, boxsize)
+    return Hxx, Hxy, Hxz, Hyy, Hyz, Hzz
+
+
+def get_nexus_sig(dens, boxsize, logsmooth=True, R0=0.5, Nmax=7, verbose=True,
+    verbose_prefix=''):
+    """Classifies simulation based on multiscale Hessian of a log-Gaussian
+    smoothed density field.
+
+    Parameters
+    ----------
+    dens : 3darray
+        Density of the 3d field.
+    boxsize : float
+        Size of the box.
+    output :
+    R0 : float, optional
+        Minimum smoothing scale.
+    Nmax : int, optional
+        Number of smoothing scales, going by sqrt(2)^N * R0.
+    verbose : bool, optional
+        Determines whether to print updates about NEXUS+ calculation.
+    verbose_prefix : str, optional
+        Prefix to verbose print statements.
+
+    Returns
+    -------
+    Sc, Sf, Sw : 3darray
+        Nexus signature for cluster, filament and wall environment.
+    """
+    # figure out shape
+    dshape = np.shape(dens)
+    # smoothing scales
+    N = np.arange(Nmax)
+    Rns = R0*np.sqrt(2.)**N
+    # run signature calculation over smoothing scales
+    for (n, Rn) in enumerate(Rns):
+        # Smooth field
+        if logsmooth:
+            if verbose:
+                print()
+                print(verbose_prefix+"Smooth log(dens) at Rn = %.4f" % Rn)
+            dsmooth = filters.logsmooth3D(dens, Rn, boxsize, setzeroto=None, zero2min=True)
+        else:
+            if verbose:
+                print()
+                print(verbose_prefix+"Smooth dens at Rn = %.4f" % Rn)
+            dsmooth = filters.smooth3D(dens, Rn, boxsize)
+        # Compute Hessian
+        Hxx, Hxy, Hxz, Hyy, Hyz, Hzz = Hessian3D(dsmooth, Rn, boxsize)
+        # Flatten Hessian
+        Hxx = Hxx.flatten()
+        Hxy = Hxy.flatten()
+        Hxz = Hxz.flatten()
+        Hyy = Hyy.flatten()
+        Hyz = Hyz.flatten()
+        Hzz = Hzz.flatten()
+        if verbose:
+            print(verbose_prefix+"Compute Nexus signature at Rn = %.4f" % Rn)
+        # Computes eigenvalues
+        eig1, eig2, eig3 = fsrc.sym_eig3by3_array(m00=Hxx, m01=Hxy, m02=Hxz,
+            m11=Hyy, m12=Hyz, m22=Hzz, mlen=len(Hxx))
+        _Sc, _Sf, _Sw = get_nexus_signature(eig1, eig2, eig3)
+        # Find maximum across already evaluated smoothing scales
+        if Rn == Rns[0]:
+            Sc = np.copy(_Sc)
+            Sf = np.copy(_Sf)
+            Sw = np.copy(_Sw)
+            Sc_layer = np.ones(np.shape(_Sc))*n
+        else:
+            cond = np.where(_Sc > Sc)[0]
+            Sc[cond] = _Sc[cond]
+            Sc_layer[cond] = n
+            cond = np.where(_Sf > Sf)[0]
+            Sf[cond] = _Sf[cond]
+            cond = np.where(_Sw > Sw)[0]
+            Sw[cond] = _Sw[cond]
+    if verbose:
+        print()
+        print(verbose_prefix+"Output Nexus signature")
+    Sc = Sc.reshape(dshape)
+    Sc_layer = Sc_layer.reshape(dshape)
+    Sf = Sf.reshape(dshape)
+    Sw = Sw.reshape(dshape)
+    return Sc, Sf, Sw

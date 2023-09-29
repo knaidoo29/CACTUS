@@ -2,7 +2,6 @@ import os
 import time
 
 import numpy as np
-#import matplotlib.pylab as plt
 
 from scipy.interpolate import interp1d
 
@@ -11,8 +10,8 @@ from ..ext import fiesta, magpie, shift
 from . import files
 from . import read
 from . import inout
-from .. import nexus
-from .. import groups
+from ..src import nexus
+from ..src import groups
 
 
 """
@@ -69,7 +68,6 @@ class CaCTus:
         """Initialise the CaCTus main class."""
         # Global variables
         self.MPI = MPI
-        self.FFT = False
         self.ERROR = False
 
         # Time Variables
@@ -83,7 +81,7 @@ class CaCTus:
             "CosmicWeb_End": None,
             "End": None
         }
-
+        self.debug = False
         # Parameters
         self.params = None
         # Cosmology
@@ -440,6 +438,23 @@ class CaCTus:
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Output"])
 
+        if self._check_param_key(params, "Debug"):
+            self.debug = bool(params["Debug"])
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" Debug: ", self._bool2yesno(self.debug))
+
+
+    def _bool2yesno(self, _x):
+        if _x is True:
+            return "Yes"
+        else:
+            return "No"
+
+    def _debugger_print(self, text, array):
+        if self.debug:
+            self.MPI.mpi_print(self.MPI.rank, text, np.shape(array), array)
+
 
     def read_paramfile(self, yaml_fname):
         """Reads parameter file."""
@@ -577,8 +592,7 @@ class CaCTus:
 
             dens = fiesta.dtfe.mpi_dtfe4grid3D(self.particles["x"], self.particles["y"], self.particles["z"],
                 self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI, self.density["MPI_Split"],
-                mass=self.particles["mass"]*np.ones(len(self.particles["x"])),
-                buffer_type=self.density["Buffer_Type"],
+                mass=self.particles["mass"]*np.ones(len(self.particles["x"])), buffer_type=self.density["Buffer_Type"],
                 buffer_length=self.density["Buffer_Length"], buffer_val=0., origin=0.,
                 subsampling=self.density["Subsampling"], outputgrid=False, verbose=True, verbose_prefix=" ---> ")
 
@@ -620,18 +634,30 @@ class CaCTus:
             x3D, y3D, z3D, dens = None, None, None, None
         self.density["dens"] = self.SBX.distribute_grid3D(x3D, y3D, z3D, dens)
 
+
     def _dens_top_hat_filter(self, radius):
-        kx3d, ky3d, kz3d = shift.cart.mpi_kgrid3D(self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
-        kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
+        self.MPI.mpi_print_zero(' -> Apply Top-Hat filter to density field with radius = %.2f' % radius)
+        mindens = self.MPI.min(self.density["dens"])
+        cond = np.where(self.density["dens"].flatten() <= 0.)[0]
+        self._debugger_print('Before frac. below zero', len(cond)/len(self.density["dens"].flatten()))
+        kx3D, ky3D, kz3D = shift.cart.mpi_kgrid3D(self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
+        kx3D = kx3D.flatten()
+        ky3D = ky3D.flatten()
+        kz3D = kz3D.flatten()
+        kmag = np.sqrt(kx3D**2. + ky3D**2. + kz3D**2.)
         kmag = kmag.flatten()
-        dk = shift.cart.fft3D(self.density["dens"], self.siminfo["Boxsize"])
+        dk = shift.cart.mpi_fft3D(self.density["dens"], self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
         kshape = np.shape(dk)
         dk = dk.flatten()
-        cond = np.where(kmag > 2.*np.pi/radius)[0]
+        #cond = np.where(kmag > 2.*np.pi/radius)[0]
+        cond = np.where((kx3D > 2.*np.pi/radius) & (ky3D > 2.*np.pi/radius) & (kz3D > 2.*np.pi/radius))[0]
         dk[cond] = 0. +1j*0.
-        #dk = dk.reshape(kshape)
-        self.density["dens"] = shift.cart.ifft3D(dk, self.siminfo["Boxsize"])
-
+        dk = dk.reshape(kshape)
+        self.density["dens"] = shift.cart.mpi_ifft3D(dk, self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
+        cond = np.where(self.density["dens"] <= 0.)
+        self._debugger_print('After frac. below zero', len(cond[0])/len(self.density["dens"].flatten()))
+        self.density["dens"][cond] = mindens*1e-1
+        #self._debugger_print('end top hat dens', self.density["dens"])
 
     # Cosmic Web Functions --------------------------------------------------- #
 
@@ -812,7 +838,7 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" -> Initialising FFT object")
         Ngrids = [self.siminfo["Ngrid"], self.siminfo["Ngrid"], self.siminfo["Ngrid"]]
-        self.FFT = self.MPI.mpi_fft_start(Ngrids)
+        #self.FFT = self.MPI.mpi_fft_start(Ngrids)
 
         cond = np.where(np.array(self.cosmicweb["Nexus"]["Signature"]["Logsmooth"]) == False)[0]
 
@@ -821,8 +847,14 @@ class CaCTus:
             self.MPI.mpi_print_zero(" -> Run Multiscale Hessian on density")
             self.MPI.mpi_print_zero()
 
+            # self.MPI.mpi_print_zero(" --> %0.6f"%np.min(self.density["dens"]))
+            # self.MPI.mpi_print_zero()
+            #
+            # cond1 = np.where(self.density["dens"] < 0.)
+            # self.density["dens"][cond1] += 1e-6
+
             _Sc, _Sf, _Sw = nexus.mpi_get_nexus_sig(self.density["dens"],
-                self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI, self.FFT,
+                self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI,
                 logsmooth=False, R0=self.cosmicweb["Nexus"]["Signature"]["R0"],
                 Nmax=self.cosmicweb["Nexus"]["Signature"]["Nmax"],
                 verbose=True, verbose_prefix=' ---> ')
@@ -841,7 +873,7 @@ class CaCTus:
             self.MPI.mpi_print_zero()
 
             _Sc, _Sf, _Sw = nexus.mpi_get_nexus_sig(self.density["dens"],
-                self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI, self.FFT,
+                self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI,
                 logsmooth=True, R0=self.cosmicweb["Nexus"]["Signature"]["R0"],
                 Nmax=self.cosmicweb["Nexus"]["Signature"]["Nmax"],
                 verbose=True, verbose_prefix=' ---> ')
@@ -1289,12 +1321,17 @@ class CaCTus:
         self.MPI.wait()
         self.time["CosmicWeb_Start"] = time.time()
 
+        #self._debugger_print('start cosmic web dens', self.density["dens"])
+
         self.MPI.mpi_print_zero(" -> Loading density")
         self._load_dens()
+        #self._debugger_print('load cosmic web dens', self.density["dens"])
         self._norm_dens()
+        #self._debugger_print('norm cosmic web dens', self.density["dens"])
         if self.cosmicweb["FilterRadius"] != 0.:
             self._dens_top_hat_filter(self.cosmicweb["FilterRadius"])
 
+        #self._debugger_print('before run cosmic web dens', self.density["dens"])
         if self.cosmicweb["Type"] == "Nexus":
             self._run_nexus()
 
