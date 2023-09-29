@@ -1,4 +1,8 @@
-numpy
+h5py
+healpy
 matplotlib
-nose
-pytest
+mpi4py
+mpi4py-fft
+numpy
+PyYAML
+scipy
