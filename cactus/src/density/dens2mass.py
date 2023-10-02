@@ -15,6 +15,22 @@ def norm_dens(dens):
     return dens
 
 
+def mpi_norm_dens(dens, MPI):
+    """Normalise density field.
+
+    Parameters
+    ----------
+    dens : array
+        Density field.
+    MPI : object
+        MPI object.
+    """
+    avgdens = MPI.mean(dens)
+    if avgdens != 1.:
+        dens /= avgdens
+    return dens
+
+
 def average_mass_per_cell(Omega_m, boxsize, ngrid):
     """Get average mass in each cell.
 
@@ -42,7 +58,7 @@ def average_mass_per_cell(Omega_m, boxsize, ngrid):
     return avgmass
 
 
-def dens2mass(dens, Omega_m, boxsize):
+def dens2mass(dens, Omega_m, boxsize, ngrid):
     """Convert density field to mass field.
 
     Parameters
@@ -61,8 +77,34 @@ def dens2mass(dens, Omega_m, boxsize):
     mass : 3darray
         Mass field.
     """
-    ngrid = len(dens)
     dens = norm_dens(dens)
+    avgmass = average_mass_per_cell(Omega_m, boxsize, ngrid)
+    mass = dens*avgmass
+    return mass
+
+
+def mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI):
+    """Convert density field to mass field.
+
+    Parameters
+    ----------
+    dens : 3darray
+        Density field.
+    Omega_m : float
+        Matter density.
+    boxsize : float
+        Boxsize.
+    ngrid : int
+        Grid size along one axis.
+    MPI : object
+        MPI object.
+
+    Returns
+    -------
+    mass : 3darray
+        Mass field.
+    """
+    dens = mpi_norm_dens(dens, MPI)
     avgmass = average_mass_per_cell(Omega_m, boxsize, ngrid)
     mass = dens*avgmass
     return mass

@@ -1,6 +1,6 @@
 
-from .matrix import eig2by2
-from .matrix import symeig3by3
+from .matrix import eig2by2_single
+from .matrix import eig2by2_array
 from .matrix import sym_eig3by3_single
 from .matrix import sym_eig3by3_array
 
