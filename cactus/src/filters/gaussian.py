@@ -3,7 +3,7 @@ import numpy as np
 from ...ext import shift
 
 
-def smooth3D(f, Rn, boxsize):
+def smooth3D(f, Rn, boxsize, ngrid):
     """Smoothing a 3D field with gaussian kernel in Fourier space.
 
     Parameters
@@ -14,6 +14,8 @@ def smooth3D(f, Rn, boxsize):
         Gaussian kernel smoothing radius.
     boxsize : float
         Size of the box.
+    ngrid : int
+        Grid size along each axis.
 
     Returns
     -------
@@ -33,7 +35,7 @@ def smooth3D(f, Rn, boxsize):
     return fsmooth
 
 
-def mpi_smooth3D(f, Rn, boxsize, MPI):
+def mpi_smooth3D(f, Rn, boxsize, ngrid, MPI):
     """Smoothing a 3D field with gaussian kernel in Fourier space.
 
     Parameters
@@ -44,6 +46,8 @@ def mpi_smooth3D(f, Rn, boxsize, MPI):
         Gaussian kernel smoothing radius.
     boxsize : float
         Size of the box.
+    ngrid : int
+        Grid size along each axis.
     MPI : obj
         MPIutils MPI object.
 
@@ -53,7 +57,6 @@ def mpi_smooth3D(f, Rn, boxsize, MPI):
         Gaussian smoothed field.
     """
     # Create fourier mode grid
-    ngrid = len(f)
     kx3d, ky3d, kz3d = shift.cart.mpi_kgrid3D(boxsize, ngrid, MPI)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
     # Forward FFT

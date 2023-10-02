@@ -161,7 +161,7 @@ def get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, minmas
     avgmass = density.average_mass_per_cell(Omega_m, boxsize, ngrid)
     avgdens = avgmass/dV
 
-    mass = density.dens2mass(dens, Omega_m, boxsize)
+    mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
 
     logS_lim, sum_M = get_mass_below_logS(Sc, mass)
 
@@ -303,7 +303,7 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, mi
     avgmass = density.average_mass_per_cell(Omega_m, boxsize, ngrid)
     avgdens = avgmass/dV
 
-    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, MPI)
+    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
 
     logS_lim, sum_M = mpi_get_mass_below_logS(Sc, mass, MPI)
 
@@ -411,8 +411,8 @@ def get_clust_threshold(Sc_lims, Num_mlim, Num_mlim_dlim):
     return Sc_lim
 
 
-def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, minmass,
-    mindens):
+def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
+    minmass):
     """Apply the cluster significance threshold to find cluster environments.
     Only environment groups larger than the minvol, minmass and mindens are kept.
 
@@ -448,7 +448,7 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, minmass,
     avgmass = density.average_mass_per_cell(Omega_m, boxsize, ngrid)
     avgdens = avgmass/dV
 
-    mass = density.dens2mass(dens, Omega_m, boxsize)
+    mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
 
     binmap = np.zeros(np.shape(Sc))
     cond = np.where(Sc > Sc_lim)
@@ -474,8 +474,8 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, minmass,
 
 
 
-def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, minmass,
-    mindens, MPI):
+def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
+    minmass, MPI):
     """Apply the cluster significance threshold to find cluster environments.
     Only environment groups larger than the minvol, minmass and mindens are kept.
 
@@ -513,7 +513,7 @@ def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, minmass
     avgmass = density.average_mass_per_cell(Omega_m, boxsize, ngrid)
     avgdens = avgmass/dV
 
-    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, MPI)
+    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
 
     binmap = np.zeros(np.shape(Sc))
     cond = np.where(Sc > Sc_lim)
@@ -573,7 +573,7 @@ def get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, nbins=100)
     cond = np.where(clust_map == 1.)
     mask[cond] = 0
 
-    mass = density.dens2mass(dens, Omega_m, boxsize)
+    mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
 
     logSf_lim, sum_M = get_mass_below_logS(Sf, mass, nbins=nbins, mask=mask)
 
@@ -622,7 +622,7 @@ def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, MPI,
     cond = np.where(clust_map == 1.)
     mask[cond] = 0
 
-    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, MPI)
+    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
 
     logSf_lim, sum_M = mpi_get_mass_below_logS(Sf, mass, MPI, nbins=nbins, mask=mask)
 
@@ -766,7 +766,7 @@ def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map, filam_map,
     cond = np.where((clust_map == 1.) | (filam_map == 1.))
     mask[cond] = 0
 
-    mass = density.dens2mass(dens, Omega_m, boxsize)
+    mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
 
     logSw_lim, sum_M = get_mass_below_logS(Sw, mass, nbins=nbins, mask=mask)
 
@@ -817,7 +817,7 @@ def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map,
     cond = np.where((clust_map == 1.) | (filam_map == 1.))
     mask[cond] = 0
 
-    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, MPI)
+    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
 
     logSw_lim, sum_M = mpi_get_mass_below_logS(Sw, mass, MPI, nbins=nbins, mask=mask)
 

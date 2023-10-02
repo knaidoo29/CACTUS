@@ -3,7 +3,7 @@ import numpy as np
 from ...ext import shift
 
 
-def tophat3D(f, R, boxsize):
+def tophat3D(f, R, boxsize, ngrid):
     """Top-hat filter in Fourier space.
 
     Parameters
@@ -14,6 +14,8 @@ def tophat3D(f, R, boxsize):
         Minimum value.
     boxsize : float
         Size of the box.
+    ngrid : int
+        Grid size along each axis.
 
     Returns
     -------
@@ -36,7 +38,7 @@ def tophat3D(f, R, boxsize):
     return ftophat
 
 
-def mpi_tophat3D(f, R, boxsize, MPI):
+def mpi_tophat3D(f, R, boxsize, ngrid, MPI):
     """Top-hat filter in Fourier space.
 
     Parameters
@@ -47,6 +49,8 @@ def mpi_tophat3D(f, R, boxsize, MPI):
         Minimum value.
     boxsize : float
         Size of the box.
+    ngrid : int
+        Grid size along each axis.
     MPI : obj
         MPIutils MPI object.
 

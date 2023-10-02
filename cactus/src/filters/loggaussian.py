@@ -48,7 +48,7 @@ def mpi_set_zero2val(f, MPI, val=None):
     return f
 
 
-def logsmooth3D(f, Rn, boxsize, setzeroto=None, zero2min=True):
+def logsmooth3D(f, Rn, boxsize, ngrid, setzeroto=None, zero2min=True):
     """Smoothing a 3D field with a log gaussian kernel in Fourier space.
 
     Parameters
@@ -59,6 +59,8 @@ def logsmooth3D(f, Rn, boxsize, setzeroto=None, zero2min=True):
         Gaussian kernel smoothing radius.
     boxsize : float
         Size of the box.
+    ngrid : int
+        Grid size along each axis.
     setzeroto : float, optional
         Set zeros to a given value.
     zero2min : bool, optional
@@ -80,7 +82,7 @@ def logsmooth3D(f, Rn, boxsize, setzeroto=None, zero2min=True):
     # Log field.
     logf = np.log10(f)
     # Apply smoothing in log space
-    logfsmooth = gaussian.smooth3D(logf, Rn, boxsize)
+    logfsmooth = gaussian.smooth3D(logf, Rn, boxsize, ngrid)
     # un-log field
     fsmooth = 10.**logfsmooth
     # correct mean
@@ -90,7 +92,7 @@ def logsmooth3D(f, Rn, boxsize, setzeroto=None, zero2min=True):
 
 
 
-def mpi_logsmooth3D(f, Rn, boxsize, MPI, setzeroto=None, zero2min=True):
+def mpi_logsmooth3D(f, Rn, boxsize, ngrid, MPI, setzeroto=None, zero2min=True):
     """Smoothing a 3D field with a log gaussian kernel in Fourier space.
 
     Parameters
@@ -101,6 +103,8 @@ def mpi_logsmooth3D(f, Rn, boxsize, MPI, setzeroto=None, zero2min=True):
         Gaussian kernel smoothing radius.
     boxsize : float
         Size of the box.
+    ngrid : int
+        Grid size along each axis.
     MPI : obj
         MPIutils MPI object.
     setzeroto : float, optional
@@ -124,7 +128,7 @@ def mpi_logsmooth3D(f, Rn, boxsize, MPI, setzeroto=None, zero2min=True):
     # Log field.
     logf = np.log10(f)
     # Apply smoothing in log space
-    logfsmooth = gaussian.mpi_smooth3D(logf, Rn, boxsize, MPI)
+    logfsmooth = gaussian.mpi_smooth3D(logf, Rn, boxsize, ngrid, MPI)
     # un-log field
     fsmooth = 10.**logfsmooth
     # correct mean
