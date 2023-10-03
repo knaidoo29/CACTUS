@@ -80,7 +80,6 @@ class CaCTus:
             "CosmicWeb_End": None,
             "End": None
         }
-        self.debug = False
         # Parameters
         self.params = None
         # Cosmology
@@ -133,8 +132,11 @@ class CaCTus:
         self.cosmicweb = {
             "Density_Prefix": None,
             "Density_Nfiles": None,
+            "Filter": {
+                "Type": None,
+                "R": None,
+            },
             "Type": None,
-            "FilterRadius": None,
             "Nexus": {
                 "Signature": {
                     "_Run": False,
@@ -155,7 +157,7 @@ class CaCTus:
                         "Mindens": None,
                         "Minvol": None,
                         "nbins": 100,
-                        "Eval": None
+                        "Neval": None
                     },
                     "Filaments": {
                         "nbins": 100,
@@ -222,6 +224,8 @@ class CaCTus:
         if key in params:
             if params[key] is not None:
                 return True
+            else:
+                return False
         else:
             return False
 
@@ -353,12 +357,29 @@ class CaCTus:
 
             self.what2run["cosmicweb"] = True
 
+            if self._check_param_key(params["CosmicWeb"], "Filter"):
+
+                self.cosmicweb["Filter"]["Type"] = str(params["CosmicWeb"]["Filter"]["Type"])
+
+                if self._check_param_key(params["CosmicWeb"]["Filter"], "R"):
+                    self.cosmicweb["Filter"]["R"] = float(params["CosmicWeb"]["Filter"]["R"])
+                else:
+                    self.MPI.mpi_print_zero(" ERROR: Must define 'R' for Filter.")
+                    self.ERROR = True
+                    self._break4error()
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" - Filter")
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -- Type\t\t\t=", self.cosmicweb["Filter"]["Type"])
+                self.MPI.mpi_print_zero(" -- R   \t\t\t=", self.cosmicweb["Filter"]["R"])
+
+
             self.cosmicweb["Type"] = params["CosmicWeb"]["Type"]
-            self.cosmicweb["FilterRadius"] = float(params["CosmicWeb"]["FilterRadius"])
 
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" - Type\t\t\t=", self.cosmicweb["Type"])
-            self.MPI.mpi_print_zero(" - FilterRadius\t\t=", self.cosmicweb["FilterRadius"])
 
             if self.cosmicweb["Type"] == "Nexus":
 
@@ -387,19 +408,19 @@ class CaCTus:
                     self.MPI.mpi_print_zero(" - Thresholds")
 
                     self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["SigFile"]["Prefix"]
-                    self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["SigFile"]["Nfiles"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["SigFile"]["Nfiles"])
 
-                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minmass"]
-                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Mindens"]
-                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minvol"]
-                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Nbins"]
-                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Evaluate"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minmass"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Mindens"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minvol"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Nbins"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Neval"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Neval"])
 
-                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Nbins"]
-                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minvol"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Minvol"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minvol"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Minvol"])
 
-                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Nbins"]
-                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Minvol"]
+                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Nbins"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Minvol"])
 
                     self.cosmicweb["Nexus"]["Thresholds"]["Output"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Output"]
 
@@ -418,7 +439,7 @@ class CaCTus:
                     self.MPI.mpi_print_zero(" --- Mindens\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"])
                     self.MPI.mpi_print_zero(" --- Minvol\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"])
                     self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"])
-                    self.MPI.mpi_print_zero(" --- Evaluate\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Evaluate"])
+                    self.MPI.mpi_print_zero(" --- Neval\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Neval"])
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Filaments")
@@ -437,23 +458,12 @@ class CaCTus:
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Output"])
 
-        if self._check_param_key(params, "Debug"):
-            self.debug = bool(params["Debug"])
-
-            self.MPI.mpi_print_zero()
-            self.MPI.mpi_print_zero(" Debug: ", self._bool2yesno(self.debug))
-
 
     def _bool2yesno(self, _x):
         if _x is True:
             return "Yes"
         else:
             return "No"
-
-
-    def _debugger_print(self, text, array):
-        if self.debug:
-            self.MPI.mpi_print(self.MPI.rank, text, np.shape(array), array)
 
 
     def read_paramfile(self, yaml_fname):
@@ -500,7 +510,7 @@ class CaCTus:
         boxsize = self.siminfo["Boxsize"]
         self._get_npart()
         npart = self.particles["npart"]
-        self.particles["mass"] = average_mass_per_cell(Omega_m, boxsize, npart)
+        self.particles["mass"] = src.density.average_mass_per_cell(Omega_m, boxsize, npart**(1./3.))
 
 
     def read_particles(self):
@@ -510,7 +520,7 @@ class CaCTus:
         self.MPI.mpi_print_zero(" =========")
         self.MPI.mpi_print_zero()
         self.MPI.wait()
-        self.MPI.mpi_print_zero(" -> Reading particles")
+        self.MPI.mpi_print_zero(" > Reading particles")
         self.time["Particle_Start"] = time.time()
         fnames = self.MPI.split_array(self.particles["Fnames"])
         if len(fnames) != 0:
@@ -541,7 +551,7 @@ class CaCTus:
         self.MPI.wait()
 
         self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> Distributing particles")
+        self.MPI.mpi_print_zero(" > Distributing particles")
         self.SBX.input(data)
         data = self.SBX.distribute()
         self.particles["x"] = data[:,0]
@@ -552,9 +562,9 @@ class CaCTus:
 
         self._particle_mass()
         self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" ---> NPart:", self.particles["npart"])
-        self.MPI.mpi_print_zero(" ---> Mass: %.4e" % (self.particles["mass"]*1e10), "M_solar h^-1")
-        self.MPI.mpi_print_zero(" ---> Mean Sep:", self.siminfo["Boxsize"]/((self.particles["npart"])**(1./3.)))
+        self.MPI.mpi_print_zero(" -> NPart     : %i " % self.particles["npart"])
+        self.MPI.mpi_print_zero(" -> Mass      : %.4e 10^10 M_solar h^-1" % self.particles["mass"])
+        self.MPI.mpi_print_zero(" -> Mean Sep. : %0.4f " % (self.siminfo["Boxsize"]/((self.particles["npart"])**(1./3.))) )
 
         self.time["Particle_End"] = time.time()
 
@@ -564,8 +574,9 @@ class CaCTus:
 
     def _save_dens(self):
         """Save density to file."""
-        inout.save_dens(self.density["Saveas"], self.MPI.rank, self.siminfo["x3D"], self.siminfo["y3D"], self.siminfo["z3D"],
-                        self.density["dens"], self.siminfo["Ngrid"], self.siminfo["Boxsize"])
+        inout.save_dens(self.density["Saveas"], self.MPI.rank, self.siminfo["x3D"],
+            self.siminfo["y3D"], self.siminfo["z3D"], self.density["dens"],
+            self.siminfo["Ngrid"], self.siminfo["Boxsize"])
 
 
     def calculate_density(self):
@@ -576,7 +587,9 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.wait()
 
-        self.MPI.mpi_print_zero(" -> Running "+self.density["Type"])
+        self.MPI.mpi_print_zero(" > Running "+self.density["Type"])
+        self.MPI.mpi_print_zero()
+
         self.time["Density_Start"] = time.time()
 
         if self.density["Type"] == "NGP" or self.density["Type"] == "CIC" or self.density["Type"] == "TSC":
@@ -592,20 +605,17 @@ class CaCTus:
                 self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI, self.density["MPI_Split"],
                 mass=self.particles["mass"]*np.ones(len(self.particles["x"])), buffer_type=self.density["Buffer_Type"],
                 buffer_length=self.density["Buffer_Length"], buffer_val=0., origin=0.,
-                subsampling=self.density["Subsampling"], outputgrid=False, verbose=True, verbose_prefix=" ---> ")
+                subsampling=self.density["Subsampling"], outputgrid=False, verbose=True, verbose_prefix=" -> ")
 
         self.density["dens"] = dens
         self.MPI.wait()
 
-        self.MPI.mpi_print_zero(" -> Saving to "+self.density["Saveas"]+"{0-"+str(self.MPI.size-1)+"}.npz")
+        self.MPI.mpi_print_zero()
+        self.MPI.mpi_print_zero(" > Saving to "+self.density["Saveas"]+"{0-"+str(self.MPI.size-1)+"}.npz")
         self._save_dens()
 
         self.time["Density_End"] = time.time()
         self.MPI.wait()
-
-
-    def _norm_dens(self):
-        self.density["dens"] = src.density.mpi_norm_dens(self.density["dens"], self.MPI)
 
 
     def _load_dens(self):
@@ -632,38 +642,55 @@ class CaCTus:
         self.density["dens"] = self.SBX.distribute_grid3D(x3D, y3D, z3D, dens)
 
 
-    def _dens_top_hat_filter(self, radius):
-        """***HERE***"""
-        self.MPI.mpi_print_zero(' -> Apply Top-Hat filter to density field with radius = %.2f' % radius)
-        mindens = self.MPI.min(self.density["dens"])
-        cond = np.where(self.density["dens"].flatten() <= 0.)[0]
-        self._debugger_print('Before frac. below zero', len(cond)/len(self.density["dens"].flatten()))
-        kx3D, ky3D, kz3D = shift.cart.mpi_kgrid3D(self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
-        kx3D = kx3D.flatten()
-        ky3D = ky3D.flatten()
-        kz3D = kz3D.flatten()
-        kmag = np.sqrt(kx3D**2. + ky3D**2. + kz3D**2.)
-        kmag = kmag.flatten()
-        dk = shift.cart.mpi_fft3D(self.density["dens"], self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
-        kshape = np.shape(dk)
-        dk = dk.flatten()
-        #cond = np.where(kmag > 2.*np.pi/radius)[0]
-        cond = np.where((kx3D > 2.*np.pi/radius) & (ky3D > 2.*np.pi/radius) & (kz3D > 2.*np.pi/radius))[0]
-        dk[cond] = 0. +1j*0.
-        dk = dk.reshape(kshape)
-        self.density["dens"] = shift.cart.mpi_ifft3D(dk, self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
-        cond = np.where(self.density["dens"] <= 0.)
-        self._debugger_print('After frac. below zero', len(cond[0])/len(self.density["dens"].flatten()))
-        self.density["dens"][cond] = mindens*1e-1
-        #self._debugger_print('end top hat dens', self.density["dens"])
+    def _norm_dens(self):
+        self.density["dens"] = src.density.mpi_norm_dens(self.density["dens"], self.MPI)
+
+
+    def _apply_filter(self):
+        if self._check_param_key(self.cosmicweb["Filter"], "Type"):
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" # Apply Filter")
+            self.MPI.mpi_print_zero(" # ============")
+            self.MPI.mpi_print_zero()
+
+            if self.cosmicweb["Filter"]["Type"] == "Tophat":
+
+                self.MPI.mpi_print_zero(" -> Applying Tophat filter")
+
+                self.density["dens"] = src.filters.mpi_tophat3D(self.density["dens"],
+                    self.cosmicweb["Filter"]["R"], self.siminfo["Boxsize"],
+                    self.siminfo["Ngrid"], self.MPI)
+
+            elif self.cosmicweb["Filter"]["Type"] == "Gaussian":
+
+                self.MPI.mpi_print_zero(" -> Applying Gaussian filter")
+
+                self.density["dens"] = src.filters.mpi_smooth3D(self.density["dens"],
+                    self.cosmicweb["Filter"]["R"], self.siminfo["Boxsize"],
+                    self.siminfo["Ngrid"], self.MPI)
+
+            elif self.cosmicweb["Filter"]["Type"] == "LogGaussian":
+
+                self.MPI.mpi_print_zero(" -> Applying LogGaussian filter")
+
+                self.density["dens"] = src.filters.mpi_logsmooth3D(self.density["dens"],
+                    self.cosmicweb["Filter"]["R"], self.siminfo["Boxsize"],
+                    self.siminfo["Ngrid"], self.MPI, setzeroto=None, zero2min=True)
+
+            else:
+
+                self.MPI.mpi_print_zero(" ERROR: Filter %s not supported, must be 'Tophat', 'Gaussian' or 'LogGaussian'." % self.cosmicweb["Filter"]["Type"])
+                self.ERROR = True
+                self._break4error()
 
 
     # Cosmic Web Functions --------------------------------------------------- #
 
-
     def _load_sig(self):
         """Load significance files."""
-        self.ERROR = inout.check_file(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"], 0, self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI)
+        self.ERROR = inout.check_file(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"],
+            0, self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI)
         self._break4error()
         sig_ind = np.arange(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"])
         sig_ind = self.MPI.split_array(sig_ind)
@@ -704,6 +731,42 @@ class CaCTus:
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
 
 
+    def _run_cweb_summary(self):
+        """Output cosmic web information."""
+
+        vol_frac = src.cweb.mpi_get_vol_fraction(self.cosmicweb["web_flag"], self.MPI)
+
+        self._density2mass()
+
+        mass_frac = src.cweb.mpi_get_mass_fraction(self.cosmicweb["web_flag"], self.density["mass"], self.MPI)
+
+        self.MPI.mpi_print_zero()
+        self.MPI.mpi_print_zero(" # Cosmic Web Summary")
+        self.MPI.mpi_print_zero(" # ==================")
+
+        self.MPI.mpi_print_zero()
+        self.MPI.mpi_print_zero(" -> Volume Fraction")
+
+        if self.MPI.rank == 0:
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" --> Clusters  : %0.4f %%" % (vol_frac[3]*1e2))
+            self.MPI.mpi_print_zero(" --> Filaments : %0.4f %%" % (vol_frac[2]*1e2))
+            self.MPI.mpi_print_zero(" --> Sheets    : %0.4f %%" % (vol_frac[1]*1e2))
+            self.MPI.mpi_print_zero(" --> Voids     : %0.4f %%" % (vol_frac[0]*1e2))
+
+        self.MPI.mpi_print_zero()
+        self.MPI.mpi_print_zero(" -> Mass Fraction")
+
+        if self.MPI.rank == 0:
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" --> Clusters  : %0.4f %%" % (mass_frac[3]*1e2))
+            self.MPI.mpi_print_zero(" --> Filaments : %0.4f %%" % (mass_frac[2]*1e2))
+            self.MPI.mpi_print_zero(" --> Sheets    : %0.4f %%" % (mass_frac[1]*1e2))
+            self.MPI.mpi_print_zero(" --> Voids     : %0.4f %%" % (mass_frac[0]*1e2))
+
+
     def _save_cweb(self):
         """Save cosmic web environments."""
         if self.cosmicweb["Type"] == "Nexus":
@@ -718,16 +781,13 @@ class CaCTus:
         self.MPI.mpi_print_zero(" ## Calculating NEXUS Signatures")
         self.MPI.mpi_print_zero(" ## ============================")
 
-        self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> Initialising FFT object")
         Ngrids = [self.siminfo["Ngrid"], self.siminfo["Ngrid"], self.siminfo["Ngrid"]]
 
         cond = np.where(np.array(self.cosmicweb["Nexus"]["Signature"]["Logsmooth"]) == False)[0]
 
         if len(cond) > 0:
             self.MPI.mpi_print_zero()
-            self.MPI.mpi_print_zero(" -> Run Multiscale Hessian on density")
-            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" --> Run Multiscale Hessian on density")
 
             _Sc, _Sf, _Sw = src.nexus.mpi_get_nexus_sig(self.density["dens"],
                 self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI,
@@ -746,8 +806,7 @@ class CaCTus:
 
         if len(cond) > 0:
             self.MPI.mpi_print_zero()
-            self.MPI.mpi_print_zero(" -> Run Multiscale Hessian on log10(density)")
-            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" --> Run Multiscale Hessian on log10(density)")
 
             _Sc, _Sf, _Sw = _Sc, _Sf, _Sw = src.nexus.mpi_get_nexus_sig(self.density["dens"],
                 self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI,
@@ -767,7 +826,7 @@ class CaCTus:
         self.cosmicweb["Nexus"]["Signature"]["Sw"] = Sw
 
         self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> Saving NEXUS signature: "+self.cosmicweb["Nexus"]["Signature"]["Output"]+"{0-%i}.npz"%(self.MPI.size-1))
+        self.MPI.mpi_print_zero(" --> Saving NEXUS signature: "+self.cosmicweb["Nexus"]["Signature"]["Output"]+"{0-%i}.npz"%(self.MPI.size-1))
 
         prefix = self.cosmicweb["Nexus"]["Signature"]["Output"]
 
@@ -781,7 +840,7 @@ class CaCTus:
         if self.cosmicweb["Nexus"]["Signature"]["_Run"] is False:
 
             self.MPI.mpi_print_zero()
-            self.MPI.mpi_print_zero(" -> Load NEXUS signature: "+self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"]+"{0-%i}.npz"%(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"]-1))
+            self.MPI.mpi_print_zero(" --> Load NEXUS signature: "+self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"]+"{0-%i}.npz"%(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"]-1))
 
             Sc, Sf, Sw = self._load_sig()
 
@@ -804,7 +863,7 @@ class CaCTus:
         Sc, Sf, Sw = self._get_nexus_signature()
 
         self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> Convert density to mass")
+        self.MPI.mpi_print_zero(" --> Convert density to mass")
 
         self._density2mass()
         mass_total = self.MPI.sum(np.sum(self.density["mass"]))
@@ -812,27 +871,28 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ### Computing Cluster Environment")
         self.MPI.mpi_print_zero(" ### =============================")
+        self.MPI.mpi_print_zero()
 
         Sc_lims, Num, Num_dlim, Num_mlim, Num_mlim_dlim = \
             src.nexus.mpi_get_Sc_group_info(Sc, self.density["dens"], self.cosmo["Omega_m"],
                 self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-                self.cosmicweb["Nexus"]["Threshold"]["Clusters"]["Minvol"],
-                self.cosmicweb["Nexus"]["Threshold"]["Clusters"]["Mindens"],
-                self.cosmicweb["Nexus"]["Threshold"]["Clusters"]["Minmass"],
-                self.MPI, neval=self.cosmicweb["Nexus"]["Threshold"]["Clusters"]["Eval"],
+                self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"],
+                self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"],
+                self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"],
+                self.MPI, neval=self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Neval"],
                 overide_min_sum_M=None, overide_max_sum_M=None,
-                verbose=True, prefix=' -> ')
+                verbose=True, prefix=' ---> ')
 
         Sc_lim = src.nexus.get_clust_threshold(Sc_lims, Num_mlim, Num_mlim_dlim)
 
         self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> Threshold log10(Sc) = %.4f" % np.log10(Sc_lim))
+        self.MPI.mpi_print_zero(" ---> Threshold log10(Sc) = %.4f" % np.log10(Sc_lim))
 
         clust_map = src.nexus.mpi_get_clust_map(Sc, Sc_lim, self.density["dens"],
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-            self.cosmicweb["Nexus"]["Threshold"]["Clusters"]["Minvol"],
-            self.cosmicweb["Nexus"]["Threshold"]["Clusters"]["Mindens"],
-            self.cosmicweb["Nexus"]["Threshold"]["Clusters"]["Minmass"])
+            self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"],
+            self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"],
+            self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"], self.MPI)
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ### Computing Filament Environment")
@@ -843,11 +903,11 @@ class CaCTus:
             clust_map, self.MPI,  nbins=self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["nbins"])
 
         self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> Threshold log10(Sf) = %.4f" % np.log10(Sf_lim))
+        self.MPI.mpi_print_zero(" ---> Threshold log10(Sf) = %.4f" % np.log10(Sf_lim))
 
-        filam_map = src.nexus.mpi_get_filam_map(Sfl, Sf_lim, self.density["dens"],
+        filam_map = src.nexus.mpi_get_filam_map(Sf, Sf_lim, self.density["dens"],
             self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-            self.cosmicweb["Nexus"]["Threshold"]["Filaments"]["Minvol"],
+            self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minvol"],
             clust_map, self.MPI)
 
         self.MPI.mpi_print_zero()
@@ -859,18 +919,22 @@ class CaCTus:
             clust_map, filam_map, self.MPI, nbins=self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["nbins"])
 
         self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> Threshold log10(Sw) = %.4f" % np.log10(Sw_lim))
+        self.MPI.mpi_print_zero(" ---> Threshold log10(Sw) = %.4f" % np.log10(Sw_lim))
 
         sheet_map = src.nexus.mpi_get_sheet_map(Sw, Sw_lim, self.density["dens"],
             self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-            self.cosmicweb["Nexus"]["Threshold"]["Walls"]["Minvol"], clust_map,
+            self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"], clust_map,
             filam_map, self.MPI)
+
+        self.MPI.mpi_print_zero()
+        self.MPI.mpi_print_zero(" ### Set Cosmic Web Environment")
+        self.MPI.mpi_print_zero(" ### ==========================")
 
         self.cosmicweb["web_flag"] = src.nexus.get_cweb_map(clust_map, filam_map, sheet_map)
 
         self.MPI.mpi_print_zero()
         fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
-        self.MPI.mpi_print_zero(" -> Saving cosmicweb environments to "+fname)
+        self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to "+fname)
 
         self._save_cweb()
 
@@ -887,6 +951,7 @@ class CaCTus:
 
         if self.cosmicweb["Nexus"]["Thresholds"]["_Run"] is True:
             self._run_nexus_threshold()
+            self._run_cweb_summary()
 
 
     def calculate_cosmicweb(self):
@@ -898,17 +963,11 @@ class CaCTus:
         self.MPI.wait()
         self.time["CosmicWeb_Start"] = time.time()
 
-        #self._debugger_print('start cosmic web dens', self.density["dens"])
-
-        self.MPI.mpi_print_zero(" -> Loading density")
+        self.MPI.mpi_print_zero(" > Loading density")
         self._load_dens()
-        #self._debugger_print('load cosmic web dens', self.density["dens"])
         self._norm_dens()
-        #self._debugger_print('norm cosmic web dens', self.density["dens"])
-        if self.cosmicweb["FilterRadius"] != 0.:
-            self._dens_top_hat_filter(self.cosmicweb["FilterRadius"])
+        self._apply_filter()
 
-        #self._debugger_print('before run cosmic web dens', self.density["dens"])
         if self.cosmicweb["Type"] == "Nexus":
             self._run_nexus()
 

@@ -23,7 +23,6 @@ def tophat3D(f, R, boxsize, ngrid):
         Tophat filtered field.
     """
     # Create fourier mode grid
-    ngrid = len(f)
     kx3d, ky3d, kz3d = shift.cart.kgrid3D(boxsize, ngrid)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
     # Forward FFT
@@ -60,7 +59,6 @@ def mpi_tophat3D(f, R, boxsize, ngrid, MPI):
         Tophat filtered field.
     """
     # Create fourier mode grid
-    ngrid = len(f)
     kx3d, ky3d, kz3d = shift.cart.mpi_kgrid3D(boxsize, ngrid, MPI)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
     # Forward FFT

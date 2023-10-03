@@ -120,7 +120,7 @@ def mpi_logsmooth3D(f, Rn, boxsize, ngrid, MPI, setzeroto=None, zero2min=True):
     # Correct for zeros.
     if setzeroto is None:
         if zero2min:
-            f = MPI.set_zero2val(f, MPI)
+            f = mpi_set_zero2val(f, MPI)
     else:
         f = set_zero2val(f, val=setzeroto)
     # Find mean to correct logsmoothing to equal mean.

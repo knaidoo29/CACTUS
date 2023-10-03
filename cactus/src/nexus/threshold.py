@@ -331,8 +331,8 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, mi
     Num_mlim_dlim = []
 
     if verbose:
-        mpi.mpi_print_zero(prefix + "{:>16} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16}".format(*["log10(Sc)", "Num(Groups)", "Num(d>dmin)", "Num(M>Mmin)", "Num(M>Mmin,d>dmin)", "Valid Frac."]))
-        mpi.mpi_print_zero(prefix + "{:>16} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16}".format(*["-"*16, "-"*16, "-"*16, "-"*16, "-"*20, "-"*16]))
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16}".format(*["log10(Sc)", "Num(Groups)", "Num(d>dmin)", "Num(M>Mmin)", "Num(M>Mmin,d>dmin)", "Valid Frac."]))
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16}".format(*["-"*16, "-"*16, "-"*16, "-"*16, "-"*20, "-"*16]))
 
     for Sc_lim in Sc_lims:
 
@@ -344,6 +344,10 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, mi
 
         group_N = groups.mpi_get_ngroup(groupID, MPI)
         group_mass = groups.mpi_sum4group(groupID, mass, MPI)
+
+        group_N = MPI.broadcast(group_N)
+        group_mass = MPI.broadcast(group_mass)
+
         # true density rho
         group_dens = group_mass/(dV*group_N)
         # in units of mean density
@@ -375,10 +379,10 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, mi
                 frac = 1.
 
         if verbose:
-            mpi.mpi_print_zero(prefix + "{:>16.6} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16.6}".format(*[np.log10(Sc_lim), Num[-1], Num_dlim[-1], Num_mlim[-1], Num_mlim_dlim[-1], frac]))
+            MPI.mpi_print_zero(prefix + "{:>16.6} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16.6}".format(*[np.log10(Sc_lim), Num[-1], Num_dlim[-1], Num_mlim[-1], Num_mlim_dlim[-1], frac]))
 
     if verbose:
-        mpi.mpi_print_zero(prefix + "{:>16} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16}".format(*["-"*16, "-"*16, "-"*16, "-"*16, "-"*20, "-"*16]))
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16} | {:>16} | {:>16} | {:>20} | {:>16}".format(*["-"*16, "-"*16, "-"*16, "-"*16, "-"*20, "-"*16]))
 
     Num = np.array(Num)
     Num_dlim = np.array(Num_dlim)
@@ -406,7 +410,10 @@ def get_clust_threshold(Sc_lims, Num_mlim, Num_mlim_dlim):
     Sc_lim : float
         The cluster significance threshold.
     """
-    f = interp1d(Num_mlim_dlim/Num_mlim, np.log10(Sc_lims))
+    frac = np.ones(len(Num_mlim_dlim))
+    cond = np.where(Num_mlim > 0)[0]
+    frac[cond] = Num_mlim_dlim[cond]/Num_mlim[cond]
+    f = interp1d(frac, np.log10(Sc_lims))
     Sc_lim = 10.**f(0.5)
     return Sc_lim
 
@@ -458,6 +465,7 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
 
     group_N = groups.get_ngroup(groupID)
     group_mass = groups.sum4group(groupID, mass)
+
     # true density rho
     group_dens = group_mass/(dV*group_N)
     # in units of mean density
@@ -523,6 +531,10 @@ def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens
 
     group_N = groups.mpi_get_ngroup(groupID, MPI)
     group_mass = groups.mpi_sum4group(groupID, mass, MPI)
+
+    group_N = MPI.broadcast(group_N)
+    group_mass = MPI.broadcast(group_mass)
+
     # true density rho
     group_dens = group_mass/(dV*group_N)
     # in units of mean density
@@ -718,6 +730,8 @@ def mpi_get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, MPI):
     groupID = groups.mpi_groupfinder(binmap, MPI)
 
     group_N = groups.mpi_get_ngroup(groupID, MPI)
+
+    group_N = MPI.broadcast(group_N)
 
     cond = np.where(group_N >= minpix)[0]
 
@@ -919,6 +933,8 @@ def mpi_get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map,
     groupID = groups.mpi_groupfinder(binmap, MPI)
 
     group_N = groups.mpi_get_ngroup(groupID, MPI)
+
+    group_N = MPI.broadcast(group_N)
 
     cond = np.where(group_N >= minpix)[0]
 

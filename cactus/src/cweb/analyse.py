@@ -56,7 +56,10 @@ def mpi_get_vol_fraction(cweb, MPI):
     Nfilam = MPI.sum(len(cond))
     cond = np.where(_cweb == 3.)[0]
     Nclust = MPI.sum(len(cond))
-    vol_frac = np.array([Nvoids, Nwalls, Nfilam, Nclust])/Ntotal
+    if MPI.rank == 0:
+        vol_frac = np.array([Nvoids, Nwalls, Nfilam, Nclust])/Ntotal
+    else:
+        vol_frac = None
     return vol_frac
 
 
@@ -118,7 +121,10 @@ def mpi_get_mass_fraction(cweb, mass, MPI):
     Mfilam = MPI.sum(np.sum(_mass[cond]))
     cond = np.where(_cweb == 3.)[0]
     Mclust = MPI.sum(np.sum(_mass[cond]))
-    mass_frac = np.array([Mvoids, Mwalls, Mfilam, Mclust])/Mtotal
+    if MPI.rank == 0:
+        mass_frac = np.array([Mvoids, Mwalls, Mfilam, Mclust])/Mtotal
+    else:
+        mass_frac = 0.
     return mass_frac
 
 
@@ -206,7 +212,7 @@ def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI):
         Average density of each group.
     """
     ngrid = len(cweb)
-    
+
     mass = density.mpi_dens2mass(dens, Omega_m, boxsize, MPI)
 
     dV = (boxsize/ngrid)**3.
