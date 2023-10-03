@@ -34,26 +34,33 @@ Siminfo:
 CosmicWeb:
   Density_Prefix: dens_lf_DTFE_
   Density_Nfiles: 4
-  Type: Nexus
-  Nexus:
-    # Signature:
-    #   R0: 0.5
-    #   Nmax: 1
-    #   Logsmooth: [False, True, True]
-    #   Output: cweb_nexus_sig2_
-    Thresholds:
-      SigFile:
-        Prefix: cweb_nexus_sig_
-        Nfiles: 4
-      Clusters:
-        Minvirdens: 220
-        Nbins: 100 #make as default, without necessitating definition
-        Evaluate: 20 # ditto
-        Minpix: 100
-      Filaments:
-        Nbins: 100
-        Minpix: 100
-      Walls:
-        Nbins: 100
-        Minpix: 100
-      Output: cweb_nexus_env_
+  # Filter:
+  #   Type: Tophat
+  #   R: 0.5
+  Type: Tweb
+  Tweb:
+    Threshold: 0.2
+    Output: cweb_tweb_env_
+  # Type: Nexus
+  # Nexus:
+  #   # Signature:
+  #   #   R0: 0.5
+  #   #   Nmax: 1
+  #   #   Logsmooth: [False, True, True]
+  #   #   Output: cweb_nexus_sig2_
+  #   Thresholds:
+  #     SigFile:
+  #       Prefix: cweb_nexus_sig_
+  #       Nfiles: 4
+  #     Clusters:
+  #       Minvirdens: 220
+  #       Nbins: 100 #make as default, without necessitating definition
+  #       Evaluate: 20 # ditto
+  #       Minpix: 100
+  #     Filaments:
+  #       Nbins: 100
+  #       Minpix: 100
+  #     Walls:
+  #       Nbins: 100
+  #       Minpix: 100
+  #     Output: cweb_nexus_env_

@@ -132,31 +132,31 @@ def mpi_run_tweb(dens, boxsize, ngrid, threshold, MPI, smooth=None, verbose=True
     dshape = np.shape(dens)
     # get grids
     if verbose:
-        print(prefix + 'Convert density to density contrast.')
+        MPI.mpi_print_zero(prefix + 'Convert density to density contrast.')
     delta = density.mpi_norm_dens(dens, MPI) - 1.
     # get grids
     if verbose:
-        print(prefix + 'Constructing real and fourier grids.')
+        MPI.mpi_print_zero(prefix + 'Constructing real and fourier grids.')
     x3d, y3d, z3d = shift.cart.mpi_grid3D(boxsize, ngrid, MPI)
     kx3d, ky3d, kz3d = shift.cart.mpi_kgrid3D(boxsize, ngrid, MPI)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
     # smooth fields
     if verbose:
-        print(prefix + 'Forward FFT')
+        MPI.mpi_print_zero(prefix + 'Forward FFT')
     deltak = shift.cart.mpi_fft3D(delta, boxsize, ngrid, MPI)
     if smooth is not None:
         if verbose:
-            print(prefix + 'Smoothing density field.')
+            MPI.mpi_print_zero(prefix + 'Smoothing density field.')
         deltak *= shift.cart.convolve_gaussian(kmag, smooth)
     # compute potential field.
     if verbose:
-        print(prefix + 'Computing potential field in fourier space.')
+        MPI.mpi_print_zero(prefix + 'Computing potential field in fourier space.')
     cond = np.where(kmag != 0)
     phik = np.zeros(np.shape(deltak)) + 1j*np.zeros(np.shape(deltak))
     phik[cond] = -deltak[cond]/kmag[cond]**2.
     # differentiate in Fourier space
     if verbose:
-        print(prefix + 'Differentiating potential field in fourier space and run backward FFT.')
+        MPI.mpi_print_zero(prefix + 'Differentiating potential field in fourier space and run backward FFT.')
     phi_xxk = shift.cart.dfdk2(kx3d, phik, k2=None)
     phi_xx = shift.cart.mpi_ifft3D(phi_xxk, boxsize, ngrid, MPI)
     del phi_xxk
@@ -182,11 +182,11 @@ def mpi_run_tweb(dens, boxsize, ngrid, threshold, MPI, smooth=None, verbose=True
     phi_yz = phi_yz.flatten()
     phi_zz = phi_zz.flatten()
     if verbose:
-        print(prefix + 'Calculating eigenvalues.')
+        MPI.mpi_print_zero(prefix + 'Calculating eigenvalues.')
     eig1, eig2, eig3 = maths.get_eig_3by3(phi_xx, phi_xy, phi_xz, phi_yy, phi_yz,
         phi_zz)
     if verbose:
-        print(prefix + 'Determining cosmic web environments.')
+        MPI.mpi_print_zero(prefix + 'Determining cosmic web environments.')
     cweb = np.zeros(len(eig1))
     cond = np.where((eig3 >= threshold) & (eig2 < threshold) & (eig1 < threshold))[0]
     cweb[cond] = 1.

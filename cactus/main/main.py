@@ -137,6 +137,12 @@ class CaCTus:
                 "R": None,
             },
             "Type": None,
+            "Tweb": {
+                "_Run": False,
+                "Threshold": None,
+                "Output": None
+            },
+            "Vweb": {},
             "Nexus": {
                 "Signature": {
                     "_Run": False,
@@ -170,8 +176,6 @@ class CaCTus:
                     "Output": None
                 }
             },
-            "Vweb": {},
-            "Tweb": {},
             "web_flag": None,
         }
 
@@ -372,8 +376,8 @@ class CaCTus:
                 self.MPI.mpi_print_zero(" - Filter")
 
                 self.MPI.mpi_print_zero()
-                self.MPI.mpi_print_zero(" -- Type\t\t\t=", self.cosmicweb["Filter"]["Type"])
-                self.MPI.mpi_print_zero(" -- R   \t\t\t=", self.cosmicweb["Filter"]["R"])
+                self.MPI.mpi_print_zero(" -- Type\t\t=", self.cosmicweb["Filter"]["Type"])
+                self.MPI.mpi_print_zero(" -- R   \t\t=", self.cosmicweb["Filter"]["R"])
 
 
             self.cosmicweb["Type"] = params["CosmicWeb"]["Type"]
@@ -381,7 +385,18 @@ class CaCTus:
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" - Type\t\t\t=", self.cosmicweb["Type"])
 
-            if self.cosmicweb["Type"] == "Nexus":
+            if self.cosmicweb["Type"] == "Tweb":
+
+                self.cosmicweb["Tweb"]["_Run"] = True
+
+                self.cosmicweb["Tweb"]["Threshold"] = float(params["CosmicWeb"]["Tweb"]["Threshold"])
+                self.cosmicweb["Tweb"]["Output"] = params["CosmicWeb"]["Tweb"]["Output"]
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -- Threshold\t\t=", self.cosmicweb["Tweb"]["Threshold"])
+                self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Tweb"]["Output"])
+
+            elif self.cosmicweb["Type"] == "Nexus":
 
                 if self._check_param_key(params["CosmicWeb"]["Nexus"], "Signature"):
 
@@ -643,10 +658,13 @@ class CaCTus:
 
 
     def _norm_dens(self):
+        """Normalise the mean density to 1."""
         self.density["dens"] = src.density.mpi_norm_dens(self.density["dens"], self.MPI)
 
 
     def _apply_filter(self):
+        """Apply a Tophat, Gaussian or LogGaussian smoothing filter to the
+        density field."""
         if self._check_param_key(self.cosmicweb["Filter"], "Type"):
 
             self.MPI.mpi_print_zero()
@@ -953,6 +971,23 @@ class CaCTus:
             self._run_nexus_threshold()
             self._run_cweb_summary()
 
+    def _run_tweb(self):
+        """Compute Tweb."""
+
+        self.MPI.mpi_print_zero()
+        self.MPI.mpi_print_zero(" # Running T-Web")
+        self.MPI.mpi_print_zero(" # =============")
+        self.MPI.mpi_print_zero()
+
+        if self.cosmicweb["Tweb"]["_Run"] is True:
+
+            self.cosmicweb["web_flag"] = src.tweb.mpi_run_tweb(self.density["dens"],
+                self.siminfo["Boxsize"], self.siminfo["Ngrid"],
+                self.cosmicweb["Tweb"]["Threshold"], self.MPI, verbose=True,
+                prefix=' -> ')
+
+            self._run_cweb_summary()
+
 
     def calculate_cosmicweb(self):
         """Compute Cosmic Web."""
@@ -968,7 +1003,10 @@ class CaCTus:
         self._norm_dens()
         self._apply_filter()
 
-        if self.cosmicweb["Type"] == "Nexus":
+        if self.cosmicweb["Type"] == "Tweb":
+            self._run_tweb()
+
+        elif self.cosmicweb["Type"] == "Nexus":
             self._run_nexus()
 
         self.time["CosmicWeb_End"] = time.time()
