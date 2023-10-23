@@ -9,9 +9,8 @@ from . import dtfe4grid
 
 
 def mpi_dtfe4grid2D(x, y, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
-                    buffer_type=None, buffer_length=0., buffer_val=0., buffer_mass=None,
-                    origin=0., subsampling=4, outputgrid=False, calcdens=True,
-                    verbose=False, verbose_prefix=""):
+    buffer_type=None, buffer_length=0., buffer_val=0., buffer_mass=None, origin=0.,
+    subsampling=4, outputgrid=False, calcdens=True, verbose=False, verbose_prefix=""):
     """Returns the Delaunay tesselation density or field on a grid.
 
     Parameters
@@ -173,9 +172,8 @@ def mpi_dtfe4grid2D(x, y, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
 
 
 def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
-                    buffer_type=None, buffer_length=0., buffer_val=0.,
-                    origin=0., subsampling=4, outputgrid=False, calcdens=True,
-                    verbose=False, verbose_prefix=""):
+    buffer_type=None, buffer_length=0., buffer_val=0., origin=0., subsampling=4,
+    outputgrid=False, calcdens=True, verbose=False, verbose_prefix=""):
     """Returns the Delaunay tesselation density or field on a grid.
 
     Parameters

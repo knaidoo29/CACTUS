@@ -158,7 +158,7 @@ def get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize):
     """
     ngrid = len(cweb)
 
-    mass = density.dens2mass(dens, Omega_m, boxsize)
+    mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
 
     dV = (boxsize/ngrid)**3.
     binmap = np.zeros(np.shape(cweb))
@@ -213,7 +213,7 @@ def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI):
     """
     ngrid = len(cweb)
 
-    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, MPI)
+    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
 
     dV = (boxsize/ngrid)**3.
     binmap = np.zeros(np.shape(cweb))

@@ -53,7 +53,7 @@ def run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, smooth=None, verbose=True
         vzk *= shift.cart.convolve_gaussian(kmag, smooth)
     # differentiate in Fourier space
     if verbose:
-        print(prefix + 'Differentiating velocity fields in fourier space and run backward FFT.')
+        print(prefix + 'Differentiating velocity and running backward FFT.')
     vxxk = shift.cart.dfdk(kx3d, vxk)
     vxx = shift.cart.ifft3D(vxxk, boxsize)
     del vxxk
@@ -156,25 +156,25 @@ def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
     vshape = np.shape(vxf)
     # get grids
     if verbose:
-        print(prefix + 'Constructing real and fourier grids.')
+        MPI.mpi_print_zero(prefix + 'Constructing real and fourier grids.')
     x3d, y3d, z3d = shift.cart.mpi_grid3D(boxsize, ngrid, MPI)
     kx3d, ky3d, kz3d = shift.cart.mpi_kgrid3D(boxsize, ngrid, MPI)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
     # smooth fields
     if verbose:
-        print(prefix + 'Forward FFT.')
+        MPI.mpi_print_zero(prefix + 'Forward FFT.')
     vxk = shift.cart.mpi_fft3D(vxf, boxsize, ngrid, MPI)
     vyk = shift.cart.mpi_fft3D(vyf, boxsize, ngrid, MPI)
     vzk = shift.cart.mpi_fft3D(vzf, boxsize, ngrid, MPI)
     if smooth is not None:
         if verbose:
-            print(prefix + 'Smoothing velocity fields in fourier space.')
+            MPI.mpi_print_zero(prefix + 'Smoothing velocity fields in fourier space.')
         vxk *= shift.cart.convolve_gaussian(kmag, smooth)
         vyk *= shift.cart.convolve_gaussian(kmag, smooth)
         vzk *= shift.cart.convolve_gaussian(kmag, smooth)
     # differentiate in Fourier space
     if verbose:
-        print(prefix + 'Differentiating velocity fields in fourier space and run backward FFT.')
+        MPI.mpi_print_zero(prefix + 'Differentiating velocity and running backward FFT.')
     vxxk = shift.cart.dfdk(kx3d, vxk)
     vxx = shift.cart.mpi_ifft3D(vxxk, boxsize, ngrid, MPI)
     del vxxk
@@ -204,7 +204,7 @@ def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
     del vzzk
     # Calculate reduced velocity tensor matrix
     if verbose:
-        print(prefix + 'Constructing reduced shear tensor.')
+        MPI.mpi_print_zero(prefix + 'Constructing reduced shear tensor.')
     Sigma_xx = vxx + vxx
     Sigma_xy = vxy + vyx
     Sigma_xz = vxz + vzx
@@ -228,11 +228,11 @@ def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
     Sigma_yz = Sigma_yz.flatten()
     Sigma_zz = Sigma_zz.flatten()
     if verbose:
-        print(prefix + 'Calculating eigenvalues.')
+        MPI.mpi_print_zero(prefix + 'Calculating eigenvalues.')
     eig1, eig2, eig3 = maths.get_eig_3by3(Sigma_xx, Sigma_xy, Sigma_xz, Sigma_yy,
         Sigma_yz, Sigma_zz)
     if verbose:
-        print(prefix + 'Determining cosmic web environments.')
+        MPI.mpi_print_zero(prefix + 'Determining cosmic web environments.')
     cweb = np.zeros(len(eig1))
     cond = np.where((eig3 >= threshold) & (eig2 < threshold) & (eig1 < threshold))[0]
     cweb[cond] = 1.

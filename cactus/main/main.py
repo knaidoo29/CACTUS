@@ -288,6 +288,7 @@ class CaCTus:
             else:
                 self.MPI.mpi_print_zero(" ERROR: Type must be ASCII, NPZ or Gadget")
                 self.ERROR = True
+
             self._break4error()
 
             if self.particles["Filelist"] is None:

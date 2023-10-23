@@ -58,7 +58,7 @@ def run_tweb(dens, boxsize, ngrid, threshold, smooth=None, verbose=True, prefix=
     phik[cond] = -deltak[cond]/kmag[cond]**2.
     # differentiate in Fourier space
     if verbose:
-        print(prefix + 'Differentiating potential field in fourier space and run backward FFT.')
+        print(prefix + 'Differentiating gravitational potential and running backward FFT.')
     phi_xxk = shift.cart.dfdk2(kx3d, phik, k2=None)
     phi_xx = shift.cart.ifft3D(phi_xxk, boxsize)
     del phi_xxk
@@ -156,7 +156,7 @@ def mpi_run_tweb(dens, boxsize, ngrid, threshold, MPI, smooth=None, verbose=True
     phik[cond] = -deltak[cond]/kmag[cond]**2.
     # differentiate in Fourier space
     if verbose:
-        MPI.mpi_print_zero(prefix + 'Differentiating potential field in fourier space and run backward FFT.')
+        MPI.mpi_print_zero(prefix + 'Differentiating gravitational potential and running backward FFT.')
     phi_xxk = shift.cart.dfdk2(kx3d, phik, k2=None)
     phi_xx = shift.cart.mpi_ifft3D(phi_xxk, boxsize, ngrid, MPI)
     del phi_xxk
