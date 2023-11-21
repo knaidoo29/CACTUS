@@ -89,6 +89,7 @@ class CaCTus:
             }
         # Siminfo
         self.siminfo = {
+            "Origin": [0., 0., 0.],
             "Boxsize": None,
             "Ngrid": None,
             "x3D": None,
@@ -259,6 +260,15 @@ class CaCTus:
         # Read in Siminfo
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" Siminfo:")
+
+        if self._check_param_key(params["Siminfo"], "Origin"):
+            self.siminfo["Origin"] = params["Siminfo"]["Origin"]
+            if np.isscalar(self.siminfo["Origin"]):
+                self.siminfo["Origin"] = [float(self.siminfo["Origin"]),
+                    float(self.siminfo["Origin"]), float(self.siminfo["Origin"])]
+            else:
+                self.siminfo["Origin"] = [float(_origin) for _origin in self.siminfo["Origin"]]
+            self.MPI.mpi_print_zero(" - Origin \t\t=", self.siminfo["Origin"])
 
         self.siminfo["Boxsize"] = float(params["Siminfo"]["Boxsize"])
         self.siminfo["Ngrid"] = int(params["Siminfo"]["Ngrid"])
@@ -493,7 +503,7 @@ class CaCTus:
     def prepare(self):
         """Prepare grid divisions."""
         self.SBX = fiesta.coords.MPI_SortByX(self.MPI)
-        self.SBX.settings(self.siminfo["Boxsize"], self.siminfo["Ngrid"])
+        self.SBX.settings(self.siminfo["Boxsize"], self.siminfo["Ngrid"], origin=self.siminfo["Origin"][0])
         self.SBX.limits4grid()
         self.siminfo["x3D"], self.siminfo["y3D"], self.siminfo["z3D"] = shift.cart.mpi_grid3D(self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
 

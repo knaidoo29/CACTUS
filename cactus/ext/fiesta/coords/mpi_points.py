@@ -3,6 +3,7 @@ import numpy as np
 from ... import shift
 
 from . import points
+from .. import boundary
 from .. import src
 
 
@@ -224,12 +225,20 @@ class MPI_SortByX:
         self.data = None
         self.limits = None
         self.all_limits = None
+        self.buffer_length = 0.
+        self.subboxsize = None
+        self.subbox_origin = None
 
 
-    def settings(self, boxsize, ngrid, origin=0.):
+    def settings(self, boxsize, ngrid, origin=0., buffer_type='periodic',
+        buffer_length=0., subboxsize=None, subbox_origin=None):
         self.boxsize = boxsize
         self.ngrid = ngrid
         self.origin = origin
+        assert buffer_length >= 0., "buffer_length cannot be < 0."
+        self.buffer_length = buffer_length
+        self.subboxsize = subboxsize
+        self.subbox_origin = subbox_origin
 
 
     def input(self, data):
@@ -253,7 +262,7 @@ class MPI_SortByX:
         if self.data is None:
             check = False
         else:
-            xmin, xmax = np.min(self.data[:,0]), np.max(self.data[:,0])
+            xmin, xmax = np.min(self.data[:,0]) - self.buffer_length, np.max(self.data[:,0]) + self.buffer_length
             if self.limits[0] <= xmin and self.limits[1] >= xmax:
                 check = True
             else:
@@ -270,14 +279,20 @@ class MPI_SortByX:
             ifdist = self.MPI.recv(0, tag=11)
         self.MPI.wait()
         return ifdist
-
-
+    
     def distribute(self):
         if self._checkifdist() is False:
             for i in range(0, self.MPI.size):
                 if self.data is not None:
-                    cond = np.where((self.data[:,0] >= self.all_limits[i,0]) &
-                                    (self.data[:,0] < self.all_limits[i,1]))[0]
+                    if i == 0:
+                        cond = np.where((self.data[:,0] >= self.all_limits[i,0] - self.buffer_length) &
+                                        (self.data[:,0] < self.all_limits[i,1] + self.buffer_length))[0]
+                    elif i == self.MPI.size - 1:
+                        cond = np.where((self.data[:,0] >= self.all_limits[i,0] - self.buffer_length) &
+                                        (self.data[:,0] <= self.all_limits[i,1] + self.buffer_length))[0]
+                    else:
+                        cond = np.where((self.data[:,0] >= self.all_limits[i,0] - self.buffer_length) &
+                                        (self.data[:,0] < self.all_limits[i,1] + self.buffer_length))[0]
                     _data = self.data[cond]
                     _hasdata = True
                 else:
