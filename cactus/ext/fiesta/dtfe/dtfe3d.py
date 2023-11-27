@@ -162,7 +162,7 @@ class Delaunay3D:
             self.points_dens = 1./point_volume
         else:
             self.points_dens = self.points[:, 4]/point_volume
-
+    
 
     def set_field(self, f=None, bufferval=0.):
         """Sets the field values of the input points.

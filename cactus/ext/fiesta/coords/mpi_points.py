@@ -3,7 +3,6 @@ import numpy as np
 from ... import shift
 
 from . import points
-from .. import boundary
 from .. import src
 
 
@@ -279,7 +278,7 @@ class MPI_SortByX:
             ifdist = self.MPI.recv(0, tag=11)
         self.MPI.wait()
         return ifdist
-    
+
     def distribute(self):
         if self._checkifdist() is False:
             for i in range(0, self.MPI.size):

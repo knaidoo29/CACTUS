@@ -650,22 +650,26 @@ class CaCTus:
         self._break4error()
         dens_ind = np.arange(self.cosmicweb["Density_Nfiles"])
         dens_ind = self.MPI.split_array(dens_ind)
-        if len(dens_ind) != 0:
-            for i in range(0, len(dens_ind)):
-                _x3D, _y3D, _z3D, _dens, Ngrid, Boxsize = inout.load_dens(self.cosmicweb["Density_Prefix"], dens_ind[i])
-                if i == 0:
-                    x3D = _x3D.flatten()
-                    y3D = _y3D.flatten()
-                    z3D = _z3D.flatten()
-                    dens = _dens.flatten()
-                else:
-                    x3D = np.concatenate([x3D, _x3D.flatten()])
-                    y3D = np.concatenate([y3D, _y3D.flatten()])
-                    z3D = np.concatenate([z3D, _z3D.flatten()])
-                    dens = np.concatenate([dens, _dens.flatten()])
+        if self.cosmicweb["Density_Nfiles"] == self.MPI.size:
+            _x3D, _y3D, _z3D, _dens, Ngrid, Boxsize = inout.load_dens(self.cosmicweb["Density_Prefix"], dens_ind[0])
+            self.density["dens"] = _dens
         else:
-            x3D, y3D, z3D, dens = None, None, None, None
-        self.density["dens"] = self.SBX.distribute_grid3D(x3D, y3D, z3D, dens)
+            if len(dens_ind) != 0:
+                for i in range(0, len(dens_ind)):
+                    _x3D, _y3D, _z3D, _dens, Ngrid, Boxsize = inout.load_dens(self.cosmicweb["Density_Prefix"], dens_ind[i])
+                    if i == 0:
+                        x3D = _x3D.flatten()
+                        y3D = _y3D.flatten()
+                        z3D = _z3D.flatten()
+                        dens = _dens.flatten()
+                    else:
+                        x3D = np.concatenate([x3D, _x3D.flatten()])
+                        y3D = np.concatenate([y3D, _y3D.flatten()])
+                        z3D = np.concatenate([z3D, _z3D.flatten()])
+                        dens = np.concatenate([dens, _dens.flatten()])
+            else:
+                x3D, y3D, z3D, dens = None, None, None, None
+            self.density["dens"] = self.SBX.distribute_grid3D(x3D, y3D, z3D, dens)
 
 
     def _norm_dens(self):

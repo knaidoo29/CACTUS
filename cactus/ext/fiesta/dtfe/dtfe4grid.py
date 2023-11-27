@@ -54,8 +54,8 @@ def mean_separation_3D(npart, boxsize):
 
 
 def dtfe4grid2D(x, y, ngrid, boxsize, f=None, mass=None, origin=0., buffer_type=None,
-    buffer_length=0., buffer_val=0., buffer_mass=None, subsampling=4, outputgrid=False,
-    calcdens=True):
+                buffer_length=0., buffer_val=0., buffer_mass=None, subsampling=4,
+                outputgrid=False, calcdens=True):
     """Returns the Delaunay tesselation density or field on a grid.
 
     Parameters
@@ -170,8 +170,8 @@ def dtfe4grid2D(x, y, ngrid, boxsize, f=None, mass=None, origin=0., buffer_type=
 
 
 def dtfe4grid3D(x, y, z, ngrid, boxsize, f=None, mass=None, origin=0., buffer_length=0.,
-    buffer_val=0., buffer_mass=None, buffer_type=None, subsampling=4, useperiodic=False,
-    outputgrid=False, calcdens=True):
+                buffer_val=0., buffer_mass=None, buffer_type=None, subsampling=4, useperiodic=False,
+                outputgrid=False, calcdens=True):
     """Returns the Delaunay tesselation density or field on a grid.
 
     Parameters
