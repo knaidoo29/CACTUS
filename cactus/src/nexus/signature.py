@@ -49,8 +49,8 @@ def get_nexus_signature(eig1, eig2, eig3):
     return Sc, Sf, Sw
 
 
-def Hessian3D(f, Rn, boxsize, ngrid):
-    """Compute Hessian matrix for the field f.
+def _Hessian3D_Fourier(f, Rn, boxsize, ngrid):
+    """Compute Hessian matrix for the field f, computed in Fourier space.
 
     Parameters
     ----------
@@ -68,7 +68,7 @@ def Hessian3D(f, Rn, boxsize, ngrid):
     Hxx, Hxy, Hxz, Hyy, Hyz, Hzz : ndarrays
         Hessian matrix elements.
     """
-    # Create fourier mode grid
+    # Create Fourier mode grid
     kx3d, ky3d, kz3d = shift.cart.kgrid3D(boxsize, ngrid)
     kmag = np.sqrt(kx3d**2. + ky3d**2. + kz3d**2.)
     # Forward FFT
@@ -94,8 +94,80 @@ def Hessian3D(f, Rn, boxsize, ngrid):
     return Hxx, Hxy, Hxz, Hyy, Hyz, Hzz
 
 
-def mpi_Hessian3D(f, Rn, boxsize, ngrid, MPI):
+def _Hessian3D_Real(f, Rn, boxsize, ngrid, periodic=True):
     """Compute Hessian matrix for the field f.
+
+    Parameters
+    ----------
+    f : 3darray
+        3D field.
+    Rn : float
+        Gaussian kernel smoothing radius.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    periodic : bool, optional
+        Periodic boundarys.
+
+    Returns
+    -------
+    Hxx, Hxy, Hxz, Hyy, Hyz, Hzz : ndarrays
+        Hessian matrix elements.
+    """
+    _, xgrid = shift.cart.grid1D(boxsize, ngrid)
+    _, ygrid = shift.cart.grid1D(boxsize, ngrid)
+    _, zgrid = shift.cart.grid1D(boxsize, ngrid)
+    Hx = fiesta.maths.dfdx(xgrid, f, periodic=periodic)
+    Hy = fiesta.maths.dfdy(ygrid, f, periodic=periodic)
+    Hz = fiesta.maths.dfdz(zgrid, f, periodic=periodic)
+    Hxx = (Rn**2.)*fiesta.maths.dfdx(xgrid, Hx, periodic=periodic)
+    Hxy = (Rn**2.)*fiesta.maths.dfdy(ygrid, Hx, periodic=periodic)
+    Hxz = (Rn**2.)*fiesta.maths.dfdz(zgrid, Hx, periodic=periodic)
+    del Hx
+    Hyx = (Rn**2.)*fiesta.maths.dfdx(xgrid, Hy, periodic=periodic)
+    Hyy = (Rn**2.)*fiesta.maths.dfdy(ygrid, Hy, periodic=periodic)
+    del Hy
+    Hzz = (Rn**2.)*fiesta.maths.dfdz(zgrid, Hz, periodic=periodic)
+    del Hz
+    return Hxx, Hxy, Hxz, Hyy, Hyz, Hzz
+
+
+def Hessian3D(f, Rn, boxsize, ngrid, periodic=True, usereal=True):
+    """Compute Hessian matrix for the field f.
+
+    Parameters
+    ----------
+    f : 3darray
+        3D field.
+    Rn : float
+        Gaussian kernel smoothing radius.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    periodic : bool, optional
+        Periodic boundarys.
+    usereal : bool, optional
+        Compute in real space.
+
+    Returns
+    -------
+    Hxx, Hxy, Hxz, Hyy, Hyz, Hzz : ndarrays
+        Hessian matrix elements.
+    """
+    if usereal:
+        return _Hessian3D_Real(f, Rn, boxsize, ngrid, periodic=periodic)
+    else:
+        if periodic == False:
+            print(' Non-periodic conditions can only be computed in real space.')
+            return _Hessian3D_Real(f, Rn, boxsize, ngrid, periodic=periodic)
+        else:
+            return _Hessian3D_Fourier(f, Rn, boxsize, ngrid)
+
+
+def _mpi_Hessian3D_Fourier(f, Rn, boxsize, ngrid, MPI):
+    """Compute Hessian matrix for the field f in Fourier space.
 
     Parameters
     ----------
@@ -141,8 +213,79 @@ def mpi_Hessian3D(f, Rn, boxsize, ngrid, MPI):
     return Hxx, Hxy, Hxz, Hyy, Hyz, Hzz
 
 
-def get_nexus_sig(dens, boxsize, ngrid, logsmooth=True, R0=0.5, Nmax=7, verbose=True,
-    verbose_prefix=''):
+def _mpi_Hessian3D_Real(f, Rn, boxsize, ngrid, MPI, periodic=True):
+    """Compute Hessian matrix for the field f in real space.
+
+    Parameters
+    ----------
+    f : 3darray
+        3D field.
+    Rn : float
+        Gaussian kernel smoothing radius.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    MPI : object
+        MPIutils object.
+    periodic : bool, optional
+        Periodic boundarys.
+
+    Returns
+    -------
+    Hxx, Hxy, Hxz, Hyy, Hyz, Hzz : ndarrays
+        Hessian matrix elements.
+    """
+    _, xgrid = shift.cart.mpi_grid1D(boxsive, ngrid, MPI)
+    _, ygrid = shift.cart.grid1D(boxsize, ngrid)
+    _, zgrid = shift.cart.grid1D(boxsize, ngrid)
+    Hx = fiesta.maths.mpi_dfdx(xgrid, f, MPI, periodic=periodic)
+    Hy = fiesta.maths.mpi_dfdy(ygrid, f, MPI, periodic=periodic)
+    Hz = fiesta.maths.mpi_dfdz(zgrid, f, MPI, periodic=periodic)
+    Hxx = (Rn**2.)*fiesta.maths.mpi_dfdx(xgrid, Hx, MPI, periodic=periodic)
+    Hxy = (Rn**2.)*fiesta.maths.mpi_dfdy(ygrid, Hx, MPI, periodic=periodic)
+    Hxz = (Rn**2.)*fiesta.maths.mpi_dfdz(zgrid, Hx, MPI, periodic=periodic)
+    Hyx = (Rn**2.)*fiesta.maths.mpi_dfdx(xgrid, Hy, MPI, periodic=periodic)
+    Hyy = (Rn**2.)*fiesta.maths.mpi_dfdy(ygrid, Hy, MPI, periodic=periodic)
+    Hzz = (Rn**2.)*fiesta.maths.mpi_dfdz(zgrid, Hz, MPI, periodic=periodic)
+    return Hxx, Hxy, Hxz, Hyy, Hyz, Hzz
+
+
+def mpi_Hessian3D(f, Rn, boxsize, ngrid, MPI, periodic=True, usereal=True):
+    """Compute Hessian matrix for the field f in real space.
+
+    Parameters
+    ----------
+    f : 3darray
+        3D field.
+    Rn : float
+        Gaussian kernel smoothing radius.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    MPI : object
+        MPIutils object.
+    periodic : bool, optional
+        Periodic boundarys.
+
+    Returns
+    -------
+    Hxx, Hxy, Hxz, Hyy, Hyz, Hzz : ndarrays
+        Hessian matrix elements.
+    """
+    if usereal:
+        return _mpi_Hessian3D_Real(f, Rn, boxsize, ngrid, MPI, periodic=periodic)
+    else:
+        if periodic == False:
+            print(' Non-periodic conditions can only be computed in real space.')
+            return _mpi_Hessian3D_Real(f, Rn, boxsize, ngrid, MPI, periodic=periodic)
+        else:
+            return _mpi_Hessian3D_Fourier(f, Rn, boxsize, ngrid, MPI)
+
+
+def get_nexus_sig(dens, boxsize, ngrid, logsmooth=True, R0=0.5, Nmax=7,
+    boundary='periodic', verbose=True, verbose_prefix=''):
     """Classifies simulation based on multiscale Hessian of a log-Gaussian
     smoothed density field.
 
@@ -160,6 +303,9 @@ def get_nexus_sig(dens, boxsize, ngrid, logsmooth=True, R0=0.5, Nmax=7, verbose=
         Minimum smoothing scale.
     Nmax : int, optional
         Number of smoothing scales, going by sqrt(2)^N * R0.
+    boundary : str, optional
+        Boundary conditions, either 'periodic' (FFT), 'neumann' (DCT) or
+        'dirichlet' (DST).
     verbose : bool, optional
         Determines whether to print updates about NEXUS+ calculation.
     verbose_prefix : str, optional
@@ -170,6 +316,12 @@ def get_nexus_sig(dens, boxsize, ngrid, logsmooth=True, R0=0.5, Nmax=7, verbose=
     Sc, Sf, Sw : 3darray
         Nexus signature for cluster, filament and wall environment.
     """
+    if boundary == 'periodic':
+        periodic = True
+    elif boundary == 'neumann' or boundary == 'dirichlet':
+        periodic = False
+    else:
+        assert False, "Boundary %s is not supported, must be periodic, neumann or dirichlet." % boundary
     # figure out shape
     dshape = np.shape(dens)
     # smoothing scales
@@ -182,14 +334,16 @@ def get_nexus_sig(dens, boxsize, ngrid, logsmooth=True, R0=0.5, Nmax=7, verbose=
             if verbose:
                 print()
                 print(verbose_prefix+"Smooth log(dens) at Rn = %.4f" % Rn)
-            dsmooth = filters.logsmooth3D(dens, Rn, boxsize, ngrid, setzeroto=None, zero2min=True)
+            dsmooth = filters.logsmooth3D(dens, Rn, boxsize, ngrid,
+                boundary=boundary, setzeroto=None, zero2min=True)
         else:
             if verbose:
                 print()
                 print(verbose_prefix+"Smooth dens at Rn = %.4f" % Rn)
-            dsmooth = filters.smooth3D(dens, Rn, boxsize, ngrid)
+            dsmooth = filters.smooth3D(dens, Rn, boxsize, ngrid, boundary=boundary)
         # Compute Hessian
-        Hxx, Hxy, Hxz, Hyy, Hyz, Hzz = Hessian3D(dsmooth, Rn, boxsize, ngrid)
+        Hxx, Hxy, Hxz, Hyy, Hyz, Hzz = Hessian3D(dsmooth, Rn, boxsize, ngrid,
+            periodic=periodic)
         # Flatten Hessian
         Hxx = Hxx.flatten()
         Hxy = Hxy.flatten()
@@ -226,7 +380,7 @@ def get_nexus_sig(dens, boxsize, ngrid, logsmooth=True, R0=0.5, Nmax=7, verbose=
 
 
 def mpi_get_nexus_sig(dens, boxsize, ngrid, MPI, logsmooth=True, R0=0.5, Nmax=7,
-    verbose=True, verbose_prefix=''):
+    boundary='periodic', verbose=True, verbose_prefix=''):
     """Classifies simulation based on multiscale Hessian of a log-Gaussian
     smoothed density field.
 
@@ -246,6 +400,9 @@ def mpi_get_nexus_sig(dens, boxsize, ngrid, MPI, logsmooth=True, R0=0.5, Nmax=7,
         Minimum smoothing scale.
     Nmax : int, optional
         Number of smoothing scales, going by sqrt(2)^N * R0.
+    boundary : str, optional
+        Boundary conditions, either 'periodic' (FFT), 'neumann' (DCT) or
+        'dirichlet' (DST).
     verbose : bool, optional
         Determines whether to print updates about NEXUS+ calculation.
     verbose_prefix : str, optional
@@ -256,6 +413,12 @@ def mpi_get_nexus_sig(dens, boxsize, ngrid, MPI, logsmooth=True, R0=0.5, Nmax=7,
     Sc, Sf, Sw : 3darray
         Nexus signature for cluster, filament and wall environment.
     """
+    if boundary == 'periodic':
+        periodic = True
+    elif boundary == 'neumann' or boundary == 'dirichlet':
+        periodic = False
+    else:
+        assert False, "Boundary %s is not supported, must be periodic, neumann or dirichlet." % boundary
     # figure out shape
     dshape = np.shape(dens)
     # smoothing scales
@@ -268,14 +431,17 @@ def mpi_get_nexus_sig(dens, boxsize, ngrid, MPI, logsmooth=True, R0=0.5, Nmax=7,
             if verbose:
                 MPI.mpi_print_zero()
                 MPI.mpi_print_zero(verbose_prefix+"Smooth log(dens) at Rn = %.4f" % Rn)
-            dsmooth = filters.mpi_logsmooth3D(dens, Rn, boxsize, ngrid, MPI, setzeroto=None, zero2min=True)
+            dsmooth = filters.mpi_logsmooth3D(dens, Rn, boxsize, ngrid, MPI,
+                setzeroto=None, zero2min=True, boundary=boundary)
         else:
             if verbose:
                 MPI.mpi_print_zero()
                 MPI.mpi_print_zero(verbose_prefix+"Smooth dens at Rn = %.4f" % Rn)
-            dsmooth = filters.mpi_smooth3D(dens, Rn, boxsize, ngrid, MPI)
+            dsmooth = filters.mpi_smooth3D(dens, Rn, boxsize, ngrid, MPI,
+                boundary=boundary)
         # Compute Hessian
-        Hxx, Hxy, Hxz, Hyy, Hyz, Hzz = mpi_Hessian3D(dsmooth, Rn, boxsize, ngrid, MPI)
+        Hxx, Hxy, Hxz, Hyy, Hyz, Hzz = mpi_Hessian3D(dsmooth, Rn, boxsize, ngrid,
+            MPI, periodic=periodic)
         # Flatten Hessian
         Hxx = Hxx.flatten()
         Hxy = Hxy.flatten()

@@ -72,7 +72,6 @@ def mpi_dfdy(ygrid, f, MPI, periodic=False):
     return dfdy
 
 
-
 def mpi_dfdz(zgrid, f, MPI, periodic=False):
     """Differentiate using a symmetric two-point derivative and the non-symmetric
     three point derivative estimator.

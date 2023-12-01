@@ -48,7 +48,8 @@ def mpi_set_zero2val(f, MPI, val=None):
     return f
 
 
-def logsmooth3D(f, Rn, boxsize, ngrid, setzeroto=None, zero2min=True):
+def logsmooth3D(f, Rn, boxsize, ngrid, setzeroto=None, zero2min=True,
+    boundary='periodic'):
     """Smoothing a 3D field with a log gaussian kernel in Fourier space.
 
     Parameters
@@ -65,6 +66,9 @@ def logsmooth3D(f, Rn, boxsize, ngrid, setzeroto=None, zero2min=True):
         Set zeros to a given value.
     zero2min : bool, optional
         Sets zeros to minimum nonzero values in the field, if setzeroto=None.
+    boundary : str, optional
+        Boundary conditions, either 'periodic' (FFT), 'neumann' (DCT) or
+        'dirichlet' (DST).
 
     Returns
     -------
@@ -82,7 +86,7 @@ def logsmooth3D(f, Rn, boxsize, ngrid, setzeroto=None, zero2min=True):
     # Log field.
     logf = np.log10(f)
     # Apply smoothing in log space
-    logfsmooth = gaussian.smooth3D(logf, Rn, boxsize, ngrid)
+    logfsmooth = gaussian.smooth3D(logf, Rn, boxsize, ngrid, boundary=boundary)
     # un-log field
     fsmooth = 10.**logfsmooth
     # correct mean
@@ -91,8 +95,8 @@ def logsmooth3D(f, Rn, boxsize, ngrid, setzeroto=None, zero2min=True):
     return fsmooth
 
 
-
-def mpi_logsmooth3D(f, Rn, boxsize, ngrid, MPI, setzeroto=None, zero2min=True):
+def mpi_logsmooth3D(f, Rn, boxsize, ngrid, MPI, setzeroto=None, zero2min=True,
+    boundary='periodic'):
     """Smoothing a 3D field with a log gaussian kernel in Fourier space.
 
     Parameters
@@ -111,6 +115,9 @@ def mpi_logsmooth3D(f, Rn, boxsize, ngrid, MPI, setzeroto=None, zero2min=True):
         Set zeros to a given value.
     zero2min : bool, optional
         Sets zeros to minimum nonzero values in the field, if setzeroto=None.
+    boundary : str, optional
+        Boundary conditions, either 'periodic' (FFT), 'neumann' (DCT) or
+        'dirichlet' (DST).
 
     Returns
     -------
@@ -128,7 +135,8 @@ def mpi_logsmooth3D(f, Rn, boxsize, ngrid, MPI, setzeroto=None, zero2min=True):
     # Log field.
     logf = np.log10(f)
     # Apply smoothing in log space
-    logfsmooth = gaussian.mpi_smooth3D(logf, Rn, boxsize, ngrid, MPI)
+    logfsmooth = gaussian.mpi_smooth3D(logf, Rn, boxsize, ngrid, MPI,
+        boundary=boundary)
     # un-log field
     fsmooth = 10.**logfsmooth
     # correct mean

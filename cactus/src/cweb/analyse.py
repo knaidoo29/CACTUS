@@ -128,7 +128,7 @@ def mpi_get_mass_fraction(cweb, mass, MPI):
     return mass_frac
 
 
-def get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize):
+def get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, periodic=True):
     """Group a specific cosmic web environment and output the groups number of
     cells, mass and average density (in units of the critical density).
 
@@ -144,6 +144,8 @@ def get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize):
         Matter density.
     boxsize : float
         Boxsize of the grid.
+    periodic : bool, optional
+        Boundary conditions.
 
     Returns
     -------
@@ -166,7 +168,7 @@ def get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize):
     cond = np.where(cweb == whichweb)
     binmap[cond] = 1.
 
-    groupID = groups.groupfinder(binmap)
+    groupID = groups.groupfinder(binmap, periodic=periodic)
 
     group_npix = groups.get_ngroup(groupID)
     group_vol  = group_npix*dV
@@ -181,7 +183,8 @@ def get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize):
     return group_npix, group_vol, group_mass, group_dens
 
 
-def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI):
+def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI,
+    periodic=True):
     """Group a specific cosmic web environment and output the groups number of
     cells, mass and average density (in units of the critical density).
 
@@ -199,6 +202,8 @@ def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI):
         Boxsize of the grid.
     MPI : object
         MPI object.
+    periodic : bool, optional
+        Boundary conditions.
 
     Returns
     -------
@@ -220,8 +225,8 @@ def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI):
 
     cond = np.where(cweb == whichweb)
     binmap[cond] = 1.
-
-    groupID = groups.mpi_groupfinder(binmap, MPI)
+    
+    groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
 
     group_npix = groups.mpi_get_ngroup(groupID, MPI)
     group_vol  = group_npix*dV

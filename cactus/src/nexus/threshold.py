@@ -108,7 +108,8 @@ def mpi_get_mass_below_logS(S, mass, MPI, nbins=100, mask=None):
 
 
 def get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, minmass,
-    neval=10, overide_min_sum_M=None, overide_max_sum_M=None, verbose=True, prefix=''):
+    neval=10, overide_min_sum_M=None, overide_max_sum_M=None, periodic=True,
+    verbose=True, prefix=''):
     """Computes group information for different thresholds of the cluster signature.
 
     Parameters
@@ -135,6 +136,8 @@ def get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, minmas
         signature.
     overide_min_sum_M, overide_max_sum_M : float, optional
         Overide min/max mass thresholds for computing signature thresholds.
+    periodic : bool, optional
+        Periodic boundary.
     verbose : bool, optional
         Print progress statements.
     prefix : str, optional
@@ -198,7 +201,7 @@ def get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, minmas
         cond = np.where(Sc > Sc_lim)
         binmap[cond] = 1.
 
-        groupID = groups.groupfinder(binmap)
+        groupID = groups.groupfinder(binmap, periodic=periodic)
         maxID = np.max(groupID.flatten())
 
         group_N = groups.get_ngroup(groupID)
@@ -247,8 +250,9 @@ def get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, minmas
     return Sc_lims, Num, Num_dlim, Num_mlim, Num_mlim_dlim
 
 
-def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, minmass,
-    MPI, neval=10, overide_min_sum_M=None, overide_max_sum_M=None, verbose=True, prefix=''):
+def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens,
+    minmass, MPI, neval=10, overide_min_sum_M=None, overide_max_sum_M=None,
+    periodic=True, verbose=True, prefix=''):
     """Computes group information for different thresholds of the cluster signature.
 
     Parameters
@@ -277,6 +281,8 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, mi
         signature.
     overide_min_sum_M, overide_max_sum_M : float, optional
         Overide min/max mass thresholds for computing signature thresholds.
+    periodic : bool, optional
+        Periodic boundary.
     verbose : bool, optional
         Print progress statements.
     prefix : str, optional
@@ -340,7 +346,7 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, mi
         cond = np.where(Sc > Sc_lim)
         binmap[cond] = 1.
 
-        groupID = groups.mpi_groupfinder(binmap, MPI)
+        groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
 
         group_N = groups.mpi_get_ngroup(groupID, MPI)
         group_mass = groups.mpi_sum4group(groupID, mass, MPI)
@@ -419,7 +425,7 @@ def get_clust_threshold(Sc_lims, Num_mlim, Num_mlim_dlim):
 
 
 def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
-    minmass):
+    minmass, periodic=True):
     """Apply the cluster significance threshold to find cluster environments.
     Only environment groups larger than the minvol, minmass and mindens are kept.
 
@@ -443,6 +449,8 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
         Minimum density for a group.
     minmass : float
         Minimum mass for a group.
+    periodic : bool, optional
+        Periodic boundary.
 
     Returns
     -------
@@ -461,7 +469,7 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
     cond = np.where(Sc > Sc_lim)
     binmap[cond] = 1.
 
-    groupID = groups.groupfinder(binmap)
+    groupID = groups.groupfinder(binmap, periodic=periodic)
 
     group_N = groups.get_ngroup(groupID)
     group_mass = groups.sum4group(groupID, mass)
@@ -483,7 +491,7 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
 
 
 def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
-    minmass, MPI):
+    minmass, MPI, periodic=True):
     """Apply the cluster significance threshold to find cluster environments.
     Only environment groups larger than the minvol, minmass and mindens are kept.
 
@@ -509,6 +517,8 @@ def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens
         Minimum mass for a group.
     MPI : object
         MPIutils object.
+    periodic : bool, optional
+        Periodic boundary.
 
     Returns
     -------
@@ -527,7 +537,7 @@ def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens
     cond = np.where(Sc > Sc_lim)
     binmap[cond] = 1.
 
-    groupID = groups.mpi_groupfinder(binmap, MPI)
+    groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
 
     group_N = groups.mpi_get_ngroup(groupID, MPI)
     group_mass = groups.mpi_sum4group(groupID, mass, MPI)
@@ -645,7 +655,8 @@ def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, MPI,
     return Sf_lim, logSf_lim, dM2
 
 
-def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map):
+def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map,
+    periodic=True):
     """Apply the filament significance threshold to find filament environments.
     Only environment groups larger than the minvol are kept.
 
@@ -665,6 +676,8 @@ def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map):
         Minimum volume for a group.
     clust_map : 3darray
         Binary map of the cluster environments.
+    periodic : bool, optional
+        Periodic boundary.
 
     Returns
     -------
@@ -678,7 +691,7 @@ def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map):
     cond = np.where((Sf > Sf_lim) & (clust_map == 0.))
     binmap[cond] = 1.
 
-    groupID = groups.groupfinder(binmap)
+    groupID = groups.groupfinder(binmap, periodic=periodic)
 
     group_N = groups.get_ngroup(groupID)
 
@@ -692,7 +705,8 @@ def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map):
     return filam_map
 
 
-def mpi_get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, MPI):
+def mpi_get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, MPI,
+    periodic=True):
     """Apply the filament significance threshold to find filament environments.
     Only environment groups larger than the minvol are kept.
 
@@ -714,6 +728,8 @@ def mpi_get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, MPI):
         Binary map of the cluster environments.
     MPI : object
         MPI object.
+    periodic : bool, optional
+        Periodic boundary.
 
     Returns
     -------
@@ -727,7 +743,7 @@ def mpi_get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, MPI):
     cond = np.where((Sf > Sf_lim) & (clust_map == 0.))
     binmap[cond] = 1.
 
-    groupID = groups.mpi_groupfinder(binmap, MPI)
+    groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
 
     group_N = groups.mpi_get_ngroup(groupID, MPI)
 
@@ -743,7 +759,8 @@ def mpi_get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, MPI):
     return filam_map
 
 
-def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map, filam_map, nbins=100):
+def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map, filam_map,
+    nbins=100):
     """Returns the sheet significance threshold.
 
     Parameters
@@ -842,7 +859,8 @@ def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map,
     return Sw_lim, logSw_lim, dM2
 
 
-def get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map, filam_map):
+def get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map,
+    filam_map, periodic=True):
     """Apply the sheet significance threshold to find sheet environments. Only
     environment groups larger than the minvol are kept.
 
@@ -864,6 +882,8 @@ def get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map, filam_map
         Binary map of the cluster environments.
     filam_map : 3darray
         Binary map of the filament environments.
+    periodic : bool, optional
+        Periodic boundary.
 
     Returns
     -------
@@ -877,7 +897,7 @@ def get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map, filam_map
     cond = np.where((Sw > Sw_lim) & (clust_map == 0.) & (filam_map == 0.))
     binmap[cond] = 1.
 
-    groupID = groups.groupfinder(binmap)
+    groupID = groups.groupfinder(binmap, periodic=periodic)
 
     group_N = groups.get_ngroup(groupID)
 
@@ -893,7 +913,7 @@ def get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map, filam_map
 
 
 def mpi_get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map,
-    filam_map, MPI):
+    filam_map, MPI, periodic=True):
     """Apply the sheet significance threshold to find sheet environments. Only
     environment groups larger than the minvol are kept.
 
@@ -917,6 +937,8 @@ def mpi_get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map,
         Binary map of the filament environments.
     MPI : object
         MPI object.
+    periodic : bool, optional
+        Periodic boundary.
 
     Returns
     -------
@@ -930,7 +952,7 @@ def mpi_get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map,
     cond = np.where((Sw > Sw_lim) & (clust_map == 0.) & (filam_map == 0.))
     binmap[cond] = 1.
 
-    groupID = groups.mpi_groupfinder(binmap, MPI)
+    groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
 
     group_N = groups.mpi_get_ngroup(groupID, MPI)
 
