@@ -32,7 +32,7 @@ exts.append(Extension(name='cactus.ext.magpie.src.pixel_1dto3d', sources=['cactu
 exts.append(Extension(name='cactus.ext.magpie.src.pixel_binbyindex', sources=['cactus/ext/magpie/src/pixel_binbyindex.f90']))
 
 setup(name = 'cactus',
-      version = "1.0.0",
+      version = "0.3.0",
       description       = "Cosmic web Classification Toolkit",
       long_description  = long_description,
       long_description_content_type = 'text/markdown',
