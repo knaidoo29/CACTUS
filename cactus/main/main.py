@@ -92,6 +92,7 @@ class CaCTus:
             "Origin": [0., 0., 0.],
             "Boxsize": None,
             "Ngrid": None,
+            "Boundary": "periodic",
             "x3D": None,
             "y3D": None,
             "z3D": None,
@@ -111,7 +112,15 @@ class CaCTus:
             "Fnames": None,
             "ASCII_Columns": None,
             "NPZ_Keys": None,
-            "Gadget_Factor": None,
+            "Pos_Factor": None,
+            "Subbox": {
+                "Use": False,
+                "Origin": [0., 0., 0.],
+                "Boxsize": None,
+                "Buffer_Length": 0.,
+                "Buffer_Type": "Periodic",
+                "Boundary": "neumann"
+            }
             "x": None,
             "y": None,
             "z": None,
@@ -277,6 +286,16 @@ class CaCTus:
         self.MPI.mpi_print_zero(" - Boxsize \t\t=", self.siminfo["Boxsize"])
         self.MPI.mpi_print_zero(" - Ngrid \t\t=", self.siminfo["Ngrid"])
 
+        if self._check_param_key(params["Siminfo"], "Boundary"):
+            if params["Siminfo"]["Boundary"] == 'periodic' or params["Siminfo"]["Boundary"] == 'neumann' or \
+                params["Siminfo"]["Boundary"] == 'dirichlet':
+                self.siminfo["Boundary"] = params["Siminfo"]["Boundary"]
+                self.MPI.mpi_print_zero(" - Boundary \t\t=", self.siminfo["Boundary"])
+            else:
+                self.MPI.mpi_print_zero(" ERROR: Boundary must be either 'periodic', 'neumann' or 'dirichlet'.")
+                self.ERROR = True
+        self._break4error()
+
         # Read Particles
         if self._check_param_key(params, "Particles"):
             self.MPI.mpi_print_zero()
@@ -326,9 +345,46 @@ class CaCTus:
                 self.particles["NPZ_Keys"] = params["Particles"]["NPZ_Keys"]
                 self.MPI.mpi_print_zero(" - NPZ_Keys \t\t=", self.particles["NPZ_Keys"])
 
-            elif self.particles["Type"] == "Gadget":
-                self.particles["Gadget_Factor"] = params["Particles"]["Gadget_Factor"]
-                self.MPI.mpi_print_zero(" - Gadget_Factor \t=", self.particles["Gadget_Factor"])
+            if self._check_param_key(params["Particles"], "Pos_Factor"):
+                self.particles["Pos_Factor"] = params["Particles"]["Pos_Factor"]
+                self.MPI.mpi_print_zero(" - Pos_Factor \t=", self.particles["Pos_Factor"])
+
+            if self._check_param_key(params["Particles"], "Subbox"):
+                self.particles["Subbox"]["Use"] = True
+                self.MPI.mpi_print_zero(" -- Subbox \t=", self._bool2yesno(self.particles["Subbox"]["Use"]))
+
+                if self._check_param_key(params["Particles"]["Subbox"], "Origin"):
+                    self.particles["Subbox"]["Origin"] = params["Particles"]["Subbox"]
+                    if np.isscalar(self.particles["Subbox"]["Origin"]):
+                        self.particles["Subbox"]["Origin"] = [float(self.particles["Subbox"]["Origin"]),
+                            float(self.siminfo["Origin"]), float(self.particles["Subbox"]["Origin"])]
+                    else:
+                        self.particles["Subbox"]["Origin"] = [float(_origin) for _origin in self.particles["Subbox"]["Origin"]]
+                    self.MPI.mpi_print_zero(" -- Origin \t\t=", self.particles["Subbox"]["Origin"])
+
+                if self._check_param_key(params["Particles"]["Subbox"], "Buffer_Length"):
+                    self.particles["Subbox"]["Buffer_Length"] = float(params["Particles"]["Subbox"]["Buffer_Length"])
+                    self.MPI.mpi_print_zero(" -- Buffer_Length \t\t=", self.particles["Subbox"]["Buffer_Length"])
+
+                if self._check_param_key(params["Particles"]["Subbox"], "Buffer_Type"):
+                    _buffer_type = params["Particles"]["Subbox"]["Buffer_Type"]
+                    if _buffer_type == 'periodic' or _buffer_type == 'random':
+                        self.particles["Subbox"]["Buffer_Type"] = params["Particles"]["Subbox"]["Buffer_Type"]
+                        self.MPI.mpi_print_zero(" -- Buffer_Type \t\t=", self.particles["Subbox"]["Buffer_Type"])
+                    else:
+                        self.MPI.mpi_print_zero(" ERROR: Buffer_Type must be 'periodic' or 'random'")
+                        self.ERROR = True
+                    self._break4error()
+
+                if self._check_param_key(params["Particles"]["Subbox"], "Boundary"):
+                    _boundary = params["Particles"]["Subbox"]["Boundary"]
+                    if _boundary == 'periodic' or _boundary == 'neumann' or _boundary == 'dirichlet':
+                        self.particles["Subbox"]["Boundary"] = params["Particles"]["Subbox"]["Boundary"]
+                        self.MPI.mpi_print_zero(" -- Boundary \t\t=", self.particles["Subbox"]["Boundary"])
+                    else:
+                        self.MPI.mpi_print_zero(" ERROR: Boundary must be 'periodic', 'neumann' or 'dirichlet'")
+                        self.ERROR = True
+                    self._break4error()
 
             self.what2run["particles"] = True
 
@@ -557,7 +613,8 @@ class CaCTus:
                     _pos = read.read_npz(fnames[i], self.particles["NPZ_Keys"])
                 elif self.particles["Type"] == "Gadget":
                     _pos = read.read_gadget(fnames[i])
-                    _pos *= self.particles["Gadget_Factor"]
+                if self.particles["Pos_Factor"] is not None:
+                    _pos *= self.particles["Pos_Factor"]
                 _x, _y, _z = _pos[:,0], _pos[:,1], _pos[:,2]
                 if i == 0:
                     self.particles["x"] = _x

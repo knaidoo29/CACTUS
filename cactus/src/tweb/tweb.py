@@ -96,6 +96,10 @@ def run_tweb(dens, boxsize, ngrid, threshold, Rsmooth=None, boundary='periodic',
         _, xgrid = shift.cart.grid1D(boxsize, ngrid)
         _, ygrid = shift.cart.grid1D(boxsize, ngrid)
         _, zgrid = shift.cart.grid1D(boxsize, ngrid)
+        if boundary == 'periodic':
+            periodic = True
+        else:
+            periodic = False
         phi_x = fiesta.maths.dfdx(xgrid, phi, periodic=periodic)
         phi_y = fiesta.maths.dfdy(ygrid, phi, periodic=periodic)
         phi_z = fiesta.maths.dfdz(zgrid, phi, periodic=periodic)
@@ -250,6 +254,10 @@ def mpi_run_tweb(dens, boxsize, ngrid, threshold, MPI, Rsmooth=None,
         _, xgrid = shift.cart.mpi_grid1D(boxsive, ngrid, MPI)
         _, ygrid = shift.cart.grid1D(boxsize, ngrid)
         _, zgrid = shift.cart.grid1D(boxsize, ngrid)
+        if boundary == 'periodic':
+            periodic = True
+        else:
+            periodic = False
         phi_x = fiesta.maths.mpi_dfdx(xgrid, phi, MPI, periodic=periodic)
         phi_y = fiesta.maths.mpi_dfdy(ygrid, phi, MPI, periodic=periodic)
         phi_z = fiesta.maths.mpi_dfdz(zgrid, phi, MPI, periodic=periodic)

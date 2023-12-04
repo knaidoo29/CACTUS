@@ -19,7 +19,7 @@ Siminfo:
   # # Filelist: Null
   # # Fname: test_lustre_cons_z0p000
   # # Nfiles: 4
-  # # Gadget_Factor: 1
+  # # Pos_Factor: 1
 
 #Density: Null
   # # # # Type: TSC

@@ -5,7 +5,7 @@ from .. import filters, maths
 
 
 def run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, Rsmooth=None,
-    boundary='periodic', verbose=True, prefix=''):
+    boundary='periodic', usereal=True, verbose=True, prefix=''):
     """Returns the V-Web cosmic web classification from the input velocity
     field. Assuming periodic boundary conditions.
 
@@ -24,6 +24,8 @@ def run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, Rsmooth=None,
     boundary : str, optional
         Boundary conditions, either 'periodic' (FFT), 'neumann' (DCT) or
         'dirichlet' (DST).
+    usereal : bool, optional
+        Compute in real space.
     verbose : bool, optional
         Determines whether to print updates about V-Web calculation.
     prefix : str, optional
@@ -54,6 +56,10 @@ def run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, Rsmooth=None,
         _, xgrid = shift.cart.grid1D(boxsize, ngrid)
         _, ygrid = shift.cart.grid1D(boxsize, ngrid)
         _, zgrid = shift.cart.grid1D(boxsize, ngrid)
+        if boundary == 'periodic':
+            periodic = True
+        else:
+            periodic = False
         vxf_x = fiesta.maths.dfdx(xgrid, vxf, periodic=periodic)
         vyf_y = fiesta.maths.dfdy(ygrid, vyf, periodic=periodic)
         vzf_z = fiesta.maths.dfdz(zgrid, vzf, periodic=periodic)
@@ -70,6 +76,11 @@ def run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, Rsmooth=None,
         vzf_zz = fiesta.maths.dfdz(zgrid, vzf_z, periodic=periodic)
         del vzf_z
     else:
+        if boundary == 'neumann' or boundary == 'dirichlet':
+            if verbose:
+                print(prefix + '[Note: Differentials will be computed with FFTs. Meaning ')
+                print(prefix + ' boundaries are assumed to be periodic and %s' % boundary)
+                print(prefix + " are not satisfied. Switch 'usereal=True' to compute in real space.]")
         # differentiate in Fourier space
         if verbose:
             print(prefix + 'Differentiating velocity and running backward FFT.')
@@ -156,8 +167,8 @@ def run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, Rsmooth=None,
     return cweb
 
 
-def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
-    verbose=True, prefix=''):
+def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, Rsmooth=None,
+    boundary='periodic', usereal=True, verbose=True, prefix=''):
     """Returns the V-Web cosmic web classification from the input velocity
     field. Assuming periodic boundary conditions.
 
@@ -173,8 +184,13 @@ def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
         Threshold for V-Web eigenvalue classifications.
     MPI : object
         MPIutils object.
-    smooth : float
+    Rsmooth : float
         Size of the Gaussian smoothing applied to the velocity field.
+    boundary : str, optional
+        Boundary conditions, either 'periodic' (FFT), 'neumann' (DCT) or
+        'dirichlet' (DST).
+    usereal : bool, optional
+        Compute in real space.
     verbose : bool, optional
         Determines whether to print updates about V-Web calculation.
     prefix : str, optional
@@ -192,7 +208,7 @@ def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
         MPI.mpi_print_zero(prefix + 'Constructing real and fourier grids.')
     x3d, y3d, z3d = shift.cart.mpi_grid3D(boxsize, ngrid, MPI)
     # smooth fields
-    if smooth is not None:
+    if Rsmooth is not None:
         if verbose:
             MPI.mpi_print_zero(prefix + 'Smoothing velocity fields in fourier space.')
         vxf = filters.mpi_smooth3D(vxf, Rsmooth, boxsize, ngrid, MPI, boundary=boundary)
@@ -205,6 +221,10 @@ def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
         _, xgrid = shift.cart.mpi_grid1D(boxsize, ngrid, MPI)
         _, ygrid = shift.cart.grid1D(boxsize, ngrid)
         _, zgrid = shift.cart.grid1D(boxsize, ngrid)
+        if boundary == 'periodic':
+            periodic = True
+        else:
+            periodic = False
         vxf_x = fiesta.maths.mpi_dfdx(xgrid, vxf, MPI, periodic=periodic)
         vyf_y = fiesta.maths.mpi_dfdy(ygrid, vyf, MPI, periodic=periodic)
         vzf_z = fiesta.maths.mpi_dfdz(zgrid, vzf, MPI, periodic=periodic)
@@ -221,6 +241,11 @@ def mpi_run_vweb(vxf, vyf, vzf, boxsize, ngrid, threshold, MPI, smooth=None,
         vzf_zz = fiesta.maths.mpi_dfdz(zgrid, vzf_z, MPI, periodic=periodic)
         del vzf_z
     else:
+        if boundary == 'neumann' or boundary == 'dirichlet':
+            if verbose:
+                MPI.mpi_print_zero(prefix + '[Note: Differentials will be computed with FFTs. Meaning ')
+                MPI.mpi_print_zero(prefix + ' boundaries are assumed to be periodic and %s' % boundary)
+                MPI.mpi_print_zero(prefix + " are not satisfied. Switch 'usereal=True' to compute in real space.]")
         # differentiate in Fourier space
         if verbose:
             MPI.mpi_print_zero(prefix + 'Differentiating velocity and running backward FFT.')
