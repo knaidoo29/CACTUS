@@ -174,8 +174,8 @@ def mpi_dtfe4grid2D(x, y, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
 
 
 def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
-    buffer_type=None, buffer_length=0., buffer_val=0., origin=0., subsampling=4,
-    outputgrid=False, calcdens=True, flush=True, verbose=False, verbose_prefix=""):
+    buffer_type=None, buffer_length=0., buffer_val=0., buffer_mass=1., origin=0., subsampling=4,
+    outputgrid=False, calcdens=True, flush=True, verbose=False, verbose_prefix="",):
     """Returns the Delaunay tesselation density or field on a grid.
 
     Parameters
@@ -203,6 +203,8 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         Buffer length.
     buffer_val : float, optional
         Value given to random buffer particles.
+    buffer_mass : float, optional
+        Mass of buffer particles.
     subsampling : int, optional
         The pixel subsampling rate. Each pixel is evaluated subsampling^2 points
         on a grid within each pixel. This is to ensure each pixel is assigned a
@@ -268,9 +270,9 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
     # sort coordinates and distribute by coordinate system
     MPI_SBX = coords.MPI_SortByX(MPI)
     MPI_SBX.settings(xboxsize, nxgrid, origin=xorigin)
-    MPI_SBX.input(data)
+    #MPI_SBX.input(data)
     MPI_SBX.limits4grid()
-    # data = MPI_SBX.distribute()
+    #data = MPI_SBX.distribute(include_internalbuffer=True)
     limits = [MPI_SBX.limits[0], MPI_SBX.limits[1], yorigin, yorigin+yboxsize, zorigin, zorigin+zboxsize]
     # add buffer particles.
     if buffer_type == 'random':
@@ -285,6 +287,12 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
             _m = np.concatenate([_data[:,4], np.ones(len(xr))*buffer_mass])
     elif buffer_type == 'periodic':
         _data = boundary.mpi_buffer_periodic_3D(data, boxsize, buffer_length, MPI, origin=origin)
+        _x, _y, _z = _data[:,0], _data[:,1], _data[:,2]
+        _f = _data[:,3]
+        if len(data[0]) == 5:
+            _m = _data[:,4]
+    elif buffer_type == 'internal':
+        _data = boundary.mpi_buffer_internal_3D(data, boxsize, buffer_length, MPI, origin=origin)
         _x, _y, _z = _data[:,0], _data[:,1], _data[:,2]
         _f = _data[:,3]
         if len(data[0]) == 5:
@@ -391,7 +399,7 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         if verbose:
             MPI.mpi_print_zero(verbose_prefix+"DTFE subgrid:", "%i/%i" % (i+1,len(xs1)))
     if flush:
-        subprocess.call('rm -v temp_dtfe_MPI_%i_*.npz' % MPI.rank, shell=True)
+        subprocess.call('rm temp_dtfe_MPI_%i_*.npz' % MPI.rank, shell=True)
     if outputgrid:
         return x3D, y3D, z3D, f3D
     else:

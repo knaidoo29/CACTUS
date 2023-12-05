@@ -87,3 +87,47 @@ def mpi_buffer_periodic_3D(data, boxsize, buffer_length, MPI, origin=0.):
         data_send_down[:,0] += xboxsize
     datap = np.vstack([datap, data_send_down, data_send_up])
     return datap
+
+
+def mpi_buffer_internal_3D(data, boxsize, buffer_length, MPI, origin=0.):
+    """Internal buffer particles between partitions are moved up and down.
+
+    Parameters
+    ----------
+    data : array
+        Where columns 0, 1 and 2 correspond to the x, y and z coordinates.
+    xboxsize : float
+        Boxsize along x-axis.
+    buffer_length : float
+        Length of the buffer region.
+    MPI : class object
+        MPIutils MPI class object.
+    origin : float, optional
+        Origin point.
+
+    Returns
+    -------
+    datap : array
+        Periodic data values.
+    """
+    if np.isscalar(origin):
+        xorigin = origin
+    else:
+        xorigin = origin[0]
+    if np.isscalar(boxsize):
+        xboxsize = boxsize
+    else:
+        xboxsize = boxsize[0]
+    cond = np.where(data[:,0] <= xorigin+buffer_length)[0]
+    data_send_down = MPI.send_down(data[cond])
+    cond = np.where(data[:,0] >= xorigin+xboxsize-buffer_length)[0]
+    data_send_up = MPI.send_up(data[cond])
+    if MPI.rank == 0:
+        #data_send_up[:,0] -= xboxsize
+        datap = np.vstack([data, data_send_down])
+    elif MPI.rank == MPI.size - 1:
+        #data_send_down[:,0] += xboxsize
+        datap = np.vstack([data, data_send_up])
+    else:
+        datap = np.vstack([data, data_send_down, data_send_up])
+    return datap

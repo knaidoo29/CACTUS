@@ -89,7 +89,6 @@ class CaCTus:
             }
         # Siminfo
         self.siminfo = {
-            "Origin": [0., 0., 0.],
             "Boxsize": None,
             "Ngrid": None,
             "Boundary": "periodic",
@@ -97,7 +96,8 @@ class CaCTus:
             "y3D": None,
             "z3D": None,
             "avgmass": None,
-            "Periodic": True
+            "Periodic": True,
+            "Buffer_Length": 0.
         }
         # Switch
         self.what2run = {
@@ -119,7 +119,7 @@ class CaCTus:
                 "Origin": [0., 0., 0.],
                 "Boxsize": None,
                 "Buffer_Length": 0.,
-                "Buffer_Type": "Periodic",
+                "Buffer_Type": "periodic",
                 "Boundary": "neumann",
                 "Periodic": False
             },
@@ -272,15 +272,15 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" Siminfo:")
 
-        self.MPI.mpi_print_zero()
-        if self._check_param_key(params["Siminfo"], "Origin"):
-            self.siminfo["Origin"] = params["Siminfo"]["Origin"]
-            if np.isscalar(self.siminfo["Origin"]):
-                self.siminfo["Origin"] = [float(self.siminfo["Origin"]),
-                    float(self.siminfo["Origin"]), float(self.siminfo["Origin"])]
-            else:
-                self.siminfo["Origin"] = [float(_origin) for _origin in self.siminfo["Origin"]]
-            self.MPI.mpi_print_zero(" - Origin \t\t=", self.siminfo["Origin"])
+        # self.MPI.mpi_print_zero()
+        # if self._check_param_key(params["Siminfo"], "Origin"):
+        #     self.siminfo["Origin"] = params["Siminfo"]["Origin"]
+        #     if np.isscalar(self.siminfo["Origin"]):
+        #         self.siminfo["Origin"] = [float(self.siminfo["Origin"]),
+        #             float(self.siminfo["Origin"]), float(self.siminfo["Origin"])]
+        #     else:
+        #         self.siminfo["Origin"] = [float(_origin) for _origin in self.siminfo["Origin"]]
+        #     self.MPI.mpi_print_zero(" - Origin \t\t=", self.siminfo["Origin"])
 
         self.siminfo["Boxsize"] = float(params["Siminfo"]["Boxsize"])
         self.siminfo["Ngrid"] = int(params["Siminfo"]["Ngrid"])
@@ -568,9 +568,11 @@ class CaCTus:
     def prepare(self):
         """Prepare grid divisions."""
         self.SBX = fiesta.coords.MPI_SortByX(self.MPI)
-        self.SBX.settings(self.siminfo["Boxsize"], self.siminfo["Ngrid"], origin=self.siminfo["Origin"][0])
+        self.SBX.settings(self.siminfo["Boxsize"], self.siminfo["Ngrid"], origin=0.,
+            buffer_length=self.siminfo["Buffer_Length"])
         self.SBX.limits4grid()
-        self.siminfo["x3D"], self.siminfo["y3D"], self.siminfo["z3D"] = shift.cart.mpi_grid3D(self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI)
+        self.siminfo["x3D"], self.siminfo["y3D"], self.siminfo["z3D"] = shift.cart.mpi_grid3D(self.siminfo["Boxsize"],
+            self.siminfo["Ngrid"], self.MPI, origin=0.)
 
     # Particle Functions ----------------------------------------------------- #
 
@@ -583,10 +585,42 @@ class CaCTus:
                     np.min(self.particles["y"]), np.max(self.particles["y"]),
                     np.min(self.particles["z"]), np.max(self.particles["z"]))
             self.MPI.mpi_print(" -> Processor", self.MPI.rank, "particle range: [%.2f, %.2f, %.2f, %.2f, %.2f, %.2f]" % lims)
+            xmin, xmax = -self.siminfo["Buffer_Length"], self.siminfo["Boxsize"]+self.siminfo["Buffer_Length"]
+            if lims[0] >= xmin and lims[1] <= xmax and lims[2] >= xmin and \
+                lims[3] <= xmax and lims[4] >= xmin and lims[5] <= xmax:
+                pass
+            else:
+                self.ERROR = True
+        self.MPI.wait()
+        errors = self.MPI.collect(self.ERROR)
+        if self.MPI.rank == 0:
+            self.ERROR = any(errors)
+        self.ERROR = self.MPI.broadcast(self.ERROR)
+        if self.ERROR:
+            self.MPI.mpi_print_zero(" ERROR: Particle range incompatible with input Boxsize.")
+        self._break4error()
 
 
     def _get_npart(self):
         """Get the number of particles."""
+        # ymin, ymax = 0.-self.siminfo["Buffer_Length"], self.siminfo["Boxsize"]+self.siminfo["Buffer_Length"]
+        # zmin, zmax = 0.-self.siminfo["Buffer_Length"], self.siminfo["Boxsize"]+self.siminfo["Buffer_Length"]
+        # if self.MPI.rank == 0:
+        #     xmin, xmax = self.SBX.limits[0]-self.siminfo["Buffer_Length"], self.SBX.limits[1]
+        #     cond = np.where((self.particles["x"] >= xmin) & (self.particles["y"] >= ymin) &
+        #         (self.particles["z"] >= zmin) & (self.particles["x"] < xmax) &
+        #         (self.particles["y"] <= ymax) & (self.particles["z"] <= zmax))[0]
+        # elif self.MPI.rank == self.MPI.size - 1:
+        #     xmin, xmax = self.SBX.limits[0], self.SBX.limits[1]+self.siminfo["Buffer_Length"]
+        #     cond = np.where((self.particles["x"] >= xmin) & (self.particles["y"] >= ymin) &
+        #         (self.particles["z"] >= zmin) & (self.particles["x"] <= xmax) &
+        #         (self.particles["y"] <= ymax) & (self.particles["z"] <= zmax))[0]
+        # else:
+        #     xmin, xmax = self.SBX.limits[0], self.SBX.limits[1]
+        #     cond = np.where((self.particles["x"] >= xmin) & (self.particles["y"] >= ymin) &
+        #         (self.particles["z"] >= zmin) & (self.particles["x"] < xmax) &
+        #         (self.particles["y"] <= ymax) & (self.particles["z"] <= zmax))[0]
+        # self.particles["npart"] = self.MPI.sum(len(cond))
         self.particles["npart"] = self.MPI.sum(len(self.particles["x"]))
         if self.MPI.rank == 0:
             self.MPI.send(self.particles["npart"], tag=11)
@@ -598,7 +632,7 @@ class CaCTus:
     def _particle_mass(self):
         """Compute particle mass."""
         Omega_m = self.cosmo["Omega_m"]
-        boxsize = self.siminfo["Boxsize"]
+        boxsize = self.siminfo["Boxsize"]+2.*self.siminfo["Buffer_Length"]
         self._get_npart()
         npart = self.particles["npart"]
         self.particles["mass"] = src.density.average_mass_per_cell(Omega_m, boxsize, npart**(1./3.))
@@ -652,11 +686,98 @@ class CaCTus:
         self._particle_range()
         self.MPI.wait()
 
+        if self.particles["Subbox"]["Use"]:
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" > Extracting Subbox")
+            self.MPI.mpi_print_zero()
+
+            self.MPI.mpi_print_zero(" -> Rerouting Subbox information to siminfo")
+            self.MPI.mpi_print_zero()
+
+            self.MPI.mpi_print_zero(" --> 'Subbox:Buffer_Length'-->'siminfo:Buffer_Length'")
+            self.siminfo["Buffer_Length"] = self.particles["Subbox"]["Buffer_Length"]
+
+            if self.particles["Subbox"]["Buffer_Type"] == "periodic":
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -> Adding periodic buffer particles")
+                data = np.column_stack([self.particles["x"], self.particles["y"], self.particles["z"]])
+                data = fiesta.boundary.buffer_periodic_3D(data, self.siminfo["Boxsize"],
+                    self.particles["Subbox"]["Buffer_Length"], origin=0.)
+                self.particles["x"] = data[:,0]
+                self.particles["y"] = data[:,1]
+                self.particles["z"] = data[:,2]
+                self._particle_range()
+                self.MPI.wait()
+            elif self.particles["Subbox"]["Buffer_Type"] == "random":
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" -> Adding random buffer particles")
+                xr, yr, zr = fiesta.boundary.mpi_buffer_random_3D(self.particles["npart"],
+                    self.siminfo["Boxsize"], self.SBX.limits, self.particles["Subbox"]["Buffer_Length"], self.MPI)
+                self.particles["x"] = np.concatenate([self.particles["x"], xr])
+                self.particles["y"] = np.concatenate([self.particles["y"], yr])
+                self.particles["z"] = np.concatenate([self.particles["z"], zr])
+                self._particle_range()
+                self.MPI.wait()
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" -> Limit to subbox range")
+
+            xmin = self.particles["Subbox"]["Origin"][0] - self.particles["Subbox"]["Buffer_Length"]
+            ymin = self.particles["Subbox"]["Origin"][1] - self.particles["Subbox"]["Buffer_Length"]
+            zmin = self.particles["Subbox"]["Origin"][2] - self.particles["Subbox"]["Buffer_Length"]
+            xmax = self.particles["Subbox"]["Origin"][0] + self.particles["Subbox"]["Boxsize"] + self.particles["Subbox"]["Buffer_Length"]
+            ymax = self.particles["Subbox"]["Origin"][1] + self.particles["Subbox"]["Boxsize"] + self.particles["Subbox"]["Buffer_Length"]
+            zmax = self.particles["Subbox"]["Origin"][2] + self.particles["Subbox"]["Boxsize"] + self.particles["Subbox"]["Buffer_Length"]
+
+            cond = np.where((self.particles["x"] >= xmin) & (self.particles["y"] >= ymin) &
+                (self.particles["z"] >= zmin) & (self.particles["x"] <= xmax) &
+                (self.particles["y"] <= ymax) & (self.particles["z"] <= zmax))[0]
+
+            if len(cond) > 0:
+                self.particles["x"] = self.particles["x"][cond] - self.particles["Subbox"]["Origin"][0]
+                self.particles["y"] = self.particles["y"][cond] - self.particles["Subbox"]["Origin"][1]
+                self.particles["z"] = self.particles["z"][cond] - self.particles["Subbox"]["Origin"][2]
+                data = np.column_stack([self.particles["x"], self.particles["y"], self.particles["z"]])
+            else:
+                self.particles["x"] = None
+                self.particles["y"] = None
+                self.particles["z"] = None
+                data = None
+
+            self._particle_range()
+
+            self.MPI.wait()
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" -> Rerouting Subbox information to siminfo")
+            self.MPI.mpi_print_zero()
+
+            self.MPI.mpi_print_zero(" --> 'Subbox:Boxsize'-->'siminfo:Boxsize'")
+            self.siminfo["Boxsize"] = self.particles["Subbox"]["Boxsize"]
+
+            self.MPI.mpi_print_zero(" --> 'Subbox:Boundary'-->'siminfo:Boundary'")
+            self.siminfo["Boundary"] = self.particles["Subbox"]["Boundary"]
+
+            self.MPI.mpi_print_zero(" --> 'Subbox:Periodic'-->'siminfo:Periodic'")
+            self.siminfo["Periodic"] = self.particles["Subbox"]["Periodic"]
+
+            self.prepare()
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" -> Redistributing particles")
+            self.SBX.input(data)
+            data = self.SBX.distribute(include_internalbuffer=False)
+            self.particles["x"] = data[:,0]
+            self.particles["y"] = data[:,1]
+            self.particles["z"] = data[:,2]
+            self._particle_range()
+            self.MPI.wait()
+
         self._particle_mass()
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" -> NPart     : %i " % self.particles["npart"])
         self.MPI.mpi_print_zero(" -> Mass      : %.4e 10^10 M_solar h^-1" % self.particles["mass"])
-        self.MPI.mpi_print_zero(" -> Mean Sep. : %0.4f " % (self.siminfo["Boxsize"]/((self.particles["npart"])**(1./3.))) )
+        self.MPI.mpi_print_zero(" -> Mean Sep. : %0.4f " % ((self.siminfo["Boxsize"]+2.*self.siminfo["Buffer_Length"])/((self.particles["npart"])**(1./3.))) )
 
         self.time["Particle_End"] = time.time()
 
@@ -680,7 +801,6 @@ class CaCTus:
         self.MPI.wait()
 
         self.MPI.mpi_print_zero(" > Running "+self.density["Type"])
-        self.MPI.mpi_print_zero()
 
         self.time["Density_Start"] = time.time()
 
@@ -693,10 +813,11 @@ class CaCTus:
 
         elif self.density["Type"] == "DTFE":
 
+            self.MPI.mpi_print_zero()
             dens = fiesta.dtfe.mpi_dtfe4grid3D(self.particles["x"], self.particles["y"], self.particles["z"],
                 self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI, self.density["MPI_Split"],
                 mass=self.particles["mass"]*np.ones(len(self.particles["x"])), buffer_type=self.density["Buffer_Type"],
-                buffer_length=self.density["Buffer_Length"], buffer_val=0., origin=0.,
+                buffer_length=self.density["Buffer_Length"], buffer_val=0., origin=0., buffer_mass=self.particles["mass"],
                 subsampling=self.density["Subsampling"], outputgrid=False, verbose=True, verbose_prefix=" -> ")
 
         self.density["dens"] = dens
