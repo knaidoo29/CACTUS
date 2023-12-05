@@ -96,7 +96,8 @@ class CaCTus:
             "x3D": None,
             "y3D": None,
             "z3D": None,
-            "avgmass": None
+            "avgmass": None,
+            "Periodic": True
         }
         # Switch
         self.what2run = {
@@ -119,8 +120,9 @@ class CaCTus:
                 "Boxsize": None,
                 "Buffer_Length": 0.,
                 "Buffer_Type": "Periodic",
-                "Boundary": "neumann"
-            }
+                "Boundary": "neumann",
+                "Periodic": False
+            },
             "x": None,
             "y": None,
             "z": None,
@@ -270,6 +272,7 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" Siminfo:")
 
+        self.MPI.mpi_print_zero()
         if self._check_param_key(params["Siminfo"], "Origin"):
             self.siminfo["Origin"] = params["Siminfo"]["Origin"]
             if np.isscalar(self.siminfo["Origin"]):
@@ -282,14 +285,15 @@ class CaCTus:
         self.siminfo["Boxsize"] = float(params["Siminfo"]["Boxsize"])
         self.siminfo["Ngrid"] = int(params["Siminfo"]["Ngrid"])
 
-        self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" - Boxsize \t\t=", self.siminfo["Boxsize"])
         self.MPI.mpi_print_zero(" - Ngrid \t\t=", self.siminfo["Ngrid"])
 
         if self._check_param_key(params["Siminfo"], "Boundary"):
-            if params["Siminfo"]["Boundary"] == 'periodic' or params["Siminfo"]["Boundary"] == 'neumann' or \
-                params["Siminfo"]["Boundary"] == 'dirichlet':
+            if params["Siminfo"]["Boundary"] == "periodic" or params["Siminfo"]["Boundary"] == "neumann" or \
+                params["Siminfo"]["Boundary"] == "dirichlet":
                 self.siminfo["Boundary"] = params["Siminfo"]["Boundary"]
+                if self.siminfo["Boundary"] != "periodic":
+                    self.siminfo["Periodic"] = False
                 self.MPI.mpi_print_zero(" - Boundary \t\t=", self.siminfo["Boundary"])
             else:
                 self.MPI.mpi_print_zero(" ERROR: Boundary must be either 'periodic', 'neumann' or 'dirichlet'.")
@@ -351,26 +355,29 @@ class CaCTus:
 
             if self._check_param_key(params["Particles"], "Subbox"):
                 self.particles["Subbox"]["Use"] = True
-                self.MPI.mpi_print_zero(" -- Subbox \t=", self._bool2yesno(self.particles["Subbox"]["Use"]))
+                self.MPI.mpi_print_zero(" - Subbox \t\t=", self._bool2yesno(self.particles["Subbox"]["Use"]))
 
                 if self._check_param_key(params["Particles"]["Subbox"], "Origin"):
-                    self.particles["Subbox"]["Origin"] = params["Particles"]["Subbox"]
+                    self.particles["Subbox"]["Origin"] = params["Particles"]["Subbox"]["Origin"]
                     if np.isscalar(self.particles["Subbox"]["Origin"]):
                         self.particles["Subbox"]["Origin"] = [float(self.particles["Subbox"]["Origin"]),
-                            float(self.siminfo["Origin"]), float(self.particles["Subbox"]["Origin"])]
+                            float(self.particles["Subbox"]["Origin"]), float(self.particles["Subbox"]["Origin"])]
                     else:
                         self.particles["Subbox"]["Origin"] = [float(_origin) for _origin in self.particles["Subbox"]["Origin"]]
                     self.MPI.mpi_print_zero(" -- Origin \t\t=", self.particles["Subbox"]["Origin"])
 
+                self.particles["Subbox"]["Boxsize"] = float(params["Particles"]["Subbox"]["Boxsize"])
+                self.MPI.mpi_print_zero(" -- Boxsize \t\t=", self.particles["Subbox"]["Boxsize"])
+
                 if self._check_param_key(params["Particles"]["Subbox"], "Buffer_Length"):
                     self.particles["Subbox"]["Buffer_Length"] = float(params["Particles"]["Subbox"]["Buffer_Length"])
-                    self.MPI.mpi_print_zero(" -- Buffer_Length \t\t=", self.particles["Subbox"]["Buffer_Length"])
+                    self.MPI.mpi_print_zero(" -- Buffer_Length \t=", self.particles["Subbox"]["Buffer_Length"])
 
                 if self._check_param_key(params["Particles"]["Subbox"], "Buffer_Type"):
                     _buffer_type = params["Particles"]["Subbox"]["Buffer_Type"]
                     if _buffer_type == 'periodic' or _buffer_type == 'random':
                         self.particles["Subbox"]["Buffer_Type"] = params["Particles"]["Subbox"]["Buffer_Type"]
-                        self.MPI.mpi_print_zero(" -- Buffer_Type \t\t=", self.particles["Subbox"]["Buffer_Type"])
+                        self.MPI.mpi_print_zero(" -- Buffer_Type \t=", self.particles["Subbox"]["Buffer_Type"])
                     else:
                         self.MPI.mpi_print_zero(" ERROR: Buffer_Type must be 'periodic' or 'random'")
                         self.ERROR = True
@@ -381,6 +388,8 @@ class CaCTus:
                     if _boundary == 'periodic' or _boundary == 'neumann' or _boundary == 'dirichlet':
                         self.particles["Subbox"]["Boundary"] = params["Particles"]["Subbox"]["Boundary"]
                         self.MPI.mpi_print_zero(" -- Boundary \t\t=", self.particles["Subbox"]["Boundary"])
+                        if self.particles["Subbox"]["Boundary"] == "periodic":
+                            self.particles["Subbox"]["Periodic"] = True
                     else:
                         self.MPI.mpi_print_zero(" ERROR: Boundary must be 'periodic', 'neumann' or 'dirichlet'")
                         self.ERROR = True
@@ -680,7 +689,7 @@ class CaCTus:
             dens = fiesta.p2g.mpi_part2grid3D(self.particles["x"], self.particles["y"],
                 self.particles["z"], self.particles["mass"]*np.ones(len(self.particles["x"])),
                 self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI,
-                method=self.density["Type"], periodic=True, origin=0.)
+                method=self.density["Type"], periodic=self.siminfo["Periodic"], origin=0.)
 
         elif self.density["Type"] == "DTFE":
 
@@ -750,7 +759,7 @@ class CaCTus:
 
                 self.density["dens"] = src.filters.mpi_tophat3D(self.density["dens"],
                     self.cosmicweb["Filter"]["R"], self.siminfo["Boxsize"],
-                    self.siminfo["Ngrid"], self.MPI)
+                    self.siminfo["Ngrid"], self.MPI, boundary=self.siminfo["Boundary"])
 
             elif self.cosmicweb["Filter"]["Type"] == "Gaussian":
 
@@ -758,7 +767,7 @@ class CaCTus:
 
                 self.density["dens"] = src.filters.mpi_smooth3D(self.density["dens"],
                     self.cosmicweb["Filter"]["R"], self.siminfo["Boxsize"],
-                    self.siminfo["Ngrid"], self.MPI)
+                    self.siminfo["Ngrid"], self.MPI, boundary=self.siminfo["Boundary"])
 
             elif self.cosmicweb["Filter"]["Type"] == "LogGaussian":
 
@@ -766,7 +775,8 @@ class CaCTus:
 
                 self.density["dens"] = src.filters.mpi_logsmooth3D(self.density["dens"],
                     self.cosmicweb["Filter"]["R"], self.siminfo["Boxsize"],
-                    self.siminfo["Ngrid"], self.MPI, setzeroto=None, zero2min=True)
+                    self.siminfo["Ngrid"], self.MPI, setzeroto=None, zero2min=True,
+                    boundary=self.siminfo["Boundary"])
 
             else:
 
@@ -862,6 +872,9 @@ class CaCTus:
         if self.cosmicweb["Type"] == "Nexus":
             fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"]+str(self.MPI.rank)+".npz"
             np.savez(fname, web_flag=self.cosmicweb["web_flag"])
+        elif self.cosmicweb["Type"] == "Tweb":
+            fname = self.cosmicweb["Tweb"]["Output"]+str(self.MPI.rank)+ ".npz"
+            np.savez(fname, web_flag=self.cosmicweb["web_flag"])
 
 
     def _run_nexus_signature(self):
@@ -883,7 +896,7 @@ class CaCTus:
                 self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI,
                 logsmooth=False, R0=self.cosmicweb["Nexus"]["Signature"]["R0"],
                 Nmax=self.cosmicweb["Nexus"]["Signature"]["Nmax"],
-                verbose=True, verbose_prefix=' ---> ')
+                boundary=self.siminfo["Boundary"], verbose=True, verbose_prefix=' ---> ')
 
         if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][0] == False:
             Sc = _Sc
@@ -898,11 +911,11 @@ class CaCTus:
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" --> Run Multiscale Hessian on log10(density)")
 
-            _Sc, _Sf, _Sw = _Sc, _Sf, _Sw = src.nexus.mpi_get_nexus_sig(self.density["dens"],
+            _Sc, _Sf, _Sw = src.nexus.mpi_get_nexus_sig(self.density["dens"],
                 self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.MPI,
                 logsmooth=True, R0=self.cosmicweb["Nexus"]["Signature"]["R0"],
                 Nmax=self.cosmicweb["Nexus"]["Signature"]["Nmax"],
-                verbose=True, verbose_prefix=' ---> ')
+                boundary=self.siminfo["Boundary"], verbose=True, verbose_prefix=' ---> ')
 
         if self.cosmicweb["Nexus"]["Signature"]["Logsmooth"][0] == True:
             Sc = _Sc
@@ -970,7 +983,7 @@ class CaCTus:
                 self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"],
                 self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"],
                 self.MPI, neval=self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Neval"],
-                overide_min_sum_M=None, overide_max_sum_M=None,
+                overide_min_sum_M=None, overide_max_sum_M=None, periodic=self.siminfo["Periodic"],
                 verbose=True, prefix=' ---> ')
 
         Sc_lim = src.nexus.get_clust_threshold(Sc_lims, Num_mlim, Num_mlim_dlim)
@@ -982,7 +995,8 @@ class CaCTus:
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
             self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"],
             self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"],
-            self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"], self.MPI)
+            self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"], self.MPI,
+            periodic=self.siminfo["Periodic"])
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ### Computing Filament Environment")
@@ -998,7 +1012,7 @@ class CaCTus:
         filam_map = src.nexus.mpi_get_filam_map(Sf, Sf_lim, self.density["dens"],
             self.siminfo["Boxsize"], self.siminfo["Ngrid"],
             self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minvol"],
-            clust_map, self.MPI)
+            clust_map, self.MPI, periodic=self.siminfo["Periodic"])
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ### Computing Sheet Environment")
@@ -1014,7 +1028,7 @@ class CaCTus:
         sheet_map = src.nexus.mpi_get_sheet_map(Sw, Sw_lim, self.density["dens"],
             self.siminfo["Boxsize"], self.siminfo["Ngrid"],
             self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"], clust_map,
-            filam_map, self.MPI)
+            filam_map, self.MPI, periodic=self.siminfo["Periodic"])
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ### Set Cosmic Web Environment")
@@ -1043,6 +1057,7 @@ class CaCTus:
             self._run_nexus_threshold()
             self._run_cweb_summary()
 
+
     def _run_tweb(self):
         """Compute Tweb."""
 
@@ -1054,11 +1069,16 @@ class CaCTus:
         if self.cosmicweb["Tweb"]["_Run"] is True:
 
             self.cosmicweb["web_flag"] = src.tweb.mpi_run_tweb(self.density["dens"],
-                self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-                self.cosmicweb["Tweb"]["Threshold"], self.MPI, verbose=True,
-                prefix=' -> ')
+                self.siminfo["Boxsize"], self.siminfo["Ngrid"], self.cosmicweb["Tweb"]["Threshold"],
+                self.MPI, boundary=self.siminfo["Boundary"], verbose=True, prefix=' -> ')
 
             self._run_cweb_summary()
+
+            self.MPI.mpi_print_zero()
+            fname = self.cosmicweb["Tweb"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
+            self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to "+fname)
+
+            self._save_cweb()
 
 
     def calculate_cosmicweb(self):

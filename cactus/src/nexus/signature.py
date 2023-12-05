@@ -1,6 +1,6 @@
 import numpy as np
 
-from ...ext import shift
+from ...ext import shift, fiesta
 from .. import maths, filters
 from .. import fortran_src as fsrc
 
@@ -125,8 +125,8 @@ def _Hessian3D_Real(f, Rn, boxsize, ngrid, periodic=True):
     Hxy = (Rn**2.)*fiesta.maths.dfdy(ygrid, Hx, periodic=periodic)
     Hxz = (Rn**2.)*fiesta.maths.dfdz(zgrid, Hx, periodic=periodic)
     del Hx
-    Hyx = (Rn**2.)*fiesta.maths.dfdx(xgrid, Hy, periodic=periodic)
     Hyy = (Rn**2.)*fiesta.maths.dfdy(ygrid, Hy, periodic=periodic)
+    Hyz = (Rn**2.)*fiesta.maths.dfdz(zgrid, Hy, periodic=periodic)
     del Hy
     Hzz = (Rn**2.)*fiesta.maths.dfdz(zgrid, Hz, periodic=periodic)
     del Hz
@@ -236,7 +236,7 @@ def _mpi_Hessian3D_Real(f, Rn, boxsize, ngrid, MPI, periodic=True):
     Hxx, Hxy, Hxz, Hyy, Hyz, Hzz : ndarrays
         Hessian matrix elements.
     """
-    _, xgrid = shift.cart.mpi_grid1D(boxsive, ngrid, MPI)
+    _, xgrid = shift.cart.mpi_grid1D(boxsize, ngrid, MPI)
     _, ygrid = shift.cart.grid1D(boxsize, ngrid)
     _, zgrid = shift.cart.grid1D(boxsize, ngrid)
     Hx = fiesta.maths.mpi_dfdx(xgrid, f, MPI, periodic=periodic)
@@ -245,9 +245,12 @@ def _mpi_Hessian3D_Real(f, Rn, boxsize, ngrid, MPI, periodic=True):
     Hxx = (Rn**2.)*fiesta.maths.mpi_dfdx(xgrid, Hx, MPI, periodic=periodic)
     Hxy = (Rn**2.)*fiesta.maths.mpi_dfdy(ygrid, Hx, MPI, periodic=periodic)
     Hxz = (Rn**2.)*fiesta.maths.mpi_dfdz(zgrid, Hx, MPI, periodic=periodic)
-    Hyx = (Rn**2.)*fiesta.maths.mpi_dfdx(xgrid, Hy, MPI, periodic=periodic)
+    del Hx
     Hyy = (Rn**2.)*fiesta.maths.mpi_dfdy(ygrid, Hy, MPI, periodic=periodic)
+    Hyz = (Rn**2.)*fiesta.maths.mpi_dfdz(zgrid, Hy, MPI, periodic=periodic)
+    del Hy
     Hzz = (Rn**2.)*fiesta.maths.mpi_dfdz(zgrid, Hz, MPI, periodic=periodic)
+    del Hz
     return Hxx, Hxy, Hxz, Hyy, Hyz, Hzz
 
 

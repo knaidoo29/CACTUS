@@ -56,14 +56,14 @@ subroutine delaunay_area_2d(x, y, del_vert0, del_vert1, del_vert2, npart, nvert,
 end subroutine delaunay_area_2d
 
 
-subroutine sum_delaunay4points_2d(delaunay_value, del_vert0, del_vert1, del_vert2, npart, nvert, point_del_sum)
+subroutine sum_delaunay_area_4_points_2d(delaunay_area, del_vert0, del_vert1, del_vert2, npart, nvert, point_area)
 
-    ! Sums the values of each Delaunay tesselation for each point.
+    ! Finds the Delaunay area for each point.
     !
     ! Parameters
     ! ----------
-    ! delaunay_value : array
-    !   Delaunay values.
+    ! delaunay_area : array
+    !   Delaunay area.
     ! del_vert0 : array
     !   Index for vertex 0 of each simplices.
     ! del_vert1 : array
@@ -77,8 +77,8 @@ subroutine sum_delaunay4points_2d(delaunay_value, del_vert0, del_vert1, del_vert
     !
     ! Returns
     ! -------
-    ! point_del_sum : array
-    !   Sum of delaunay value for each point.
+    ! point_area : array
+    !   Delaunay area for each point.
 
     implicit none
     integer, parameter :: dp = kind(1.d0)
@@ -86,26 +86,26 @@ subroutine sum_delaunay4points_2d(delaunay_value, del_vert0, del_vert1, del_vert
     ! Declare variables.
 
     integer, intent(in) :: npart, nvert
-    real(kind=dp), intent(in) :: delaunay_value(nvert)
+    real(kind=dp), intent(in) :: delaunay_area(nvert)
     integer, intent(in) :: del_vert0(nvert), del_vert1(nvert), del_vert2(nvert)
-    real(kind=dp), intent(out) :: point_del_sum(npart)
+    real(kind=dp), intent(out) :: point_area(npart)
 
     integer :: i, i0, i1, i2
 
     do i = 1, npart
-      point_del_sum(i) = 0.
+      point_area(i) = 0.
     end do
 
     do i = 1, nvert
       i0 = del_vert0(i) + 1
       i1 = del_vert1(i) + 1
       i2 = del_vert2(i) + 1
-      point_del_sum(i0) = point_del_sum(i0) + delaunay_value(i)/3.
-      point_del_sum(i1) = point_del_sum(i1) + delaunay_value(i)/3.
-      point_del_sum(i2) = point_del_sum(i2) + delaunay_value(i)/3.
+      point_area(i0) = point_area(i0) + delaunay_area(i)/3.
+      point_area(i1) = point_area(i1) + delaunay_area(i)/3.
+      point_area(i2) = point_area(i2) + delaunay_area(i)/3.
     end do
 
-end subroutine sum_delaunay4points_2d
+end subroutine sum_delaunay_area_4_points_2d
 
 
 subroutine get_delf0_2d(x, y, f, del_vert0, del_vert1, del_vert2, npart, nvert, delf0)

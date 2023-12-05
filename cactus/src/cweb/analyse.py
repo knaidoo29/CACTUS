@@ -225,7 +225,7 @@ def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI,
 
     cond = np.where(cweb == whichweb)
     binmap[cond] = 1.
-    
+
     groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
 
     group_npix = groups.mpi_get_ngroup(groupID, MPI)

@@ -251,7 +251,7 @@ def mpi_run_tweb(dens, boxsize, ngrid, threshold, MPI, Rsmooth=None,
             phi = shift.cart.mpi_idst3D(phik, boxsize, ngrid, MPI)
         else:
             assert False, "Boundary %s is not supported, must be periodic, neumann or dirichlet." % boundary
-        _, xgrid = shift.cart.mpi_grid1D(boxsive, ngrid, MPI)
+        _, xgrid = shift.cart.mpi_grid1D(boxsize, ngrid, MPI)
         _, ygrid = shift.cart.grid1D(boxsize, ngrid)
         _, zgrid = shift.cart.grid1D(boxsize, ngrid)
         if boundary == 'periodic':
@@ -265,8 +265,8 @@ def mpi_run_tweb(dens, boxsize, ngrid, threshold, MPI, Rsmooth=None,
         phi_xy = fiesta.maths.mpi_dfdy(ygrid, phi_x, MPI, periodic=periodic)
         phi_xz = fiesta.maths.mpi_dfdz(zgrid, phi_x, MPI, periodic=periodic)
         del phi_x
-        phi_yx = fiesta.maths.mpi_dfdx(xgrid, phi_y, MPI, periodic=periodic)
         phi_yy = fiesta.maths.mpi_dfdy(ygrid, phi_y, MPI, periodic=periodic)
+        phi_yz = fiesta.maths.mpi_dfdz(zgrid, phi_y, MPI, periodic=periodic)
         del phi_y
         phi_zz = fiesta.maths.mpi_dfdz(zgrid, phi_z, MPI, periodic=periodic)
         del phi_z

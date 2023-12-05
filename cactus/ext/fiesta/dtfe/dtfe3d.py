@@ -155,14 +155,14 @@ class Delaunay3D:
         del_vert1 = self.delaunay_simplices[:, 1]
         del_vert2 = self.delaunay_simplices[:, 2]
         del_vert3 = self.delaunay_simplices[:, 3]
-        point_volume = src.sum_delaunay4points_3d(delaunay_value=self.delaunay_volume,
+        point_volume = src.sum_delaunay_vol_4_points_3d(delaunay_vol=self.delaunay_volume,
             del_vert0=del_vert0, del_vert1=del_vert1, del_vert2=del_vert2,
             del_vert3=del_vert3, npart=self.ntotal, nvert=self.nvert)
         if len(self.points) == 4:
             self.points_dens = 1./point_volume
         else:
             self.points_dens = self.points[:, 4]/point_volume
-    
+
 
     def set_field(self, f=None, bufferval=0.):
         """Sets the field values of the input points.

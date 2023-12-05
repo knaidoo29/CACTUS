@@ -151,7 +151,7 @@ class Delaunay2D:
         del_vert0 = self.delaunay_simplices[:, 0]
         del_vert1 = self.delaunay_simplices[:, 1]
         del_vert2 = self.delaunay_simplices[:, 2]
-        point_area = src.sum_delaunay4points_2d(delaunay_value=self.delaunay_area,
+        point_area = src.sum_delaunay_area_4_points_2d(delaunay_area=self.delaunay_area,
             del_vert0=del_vert0, del_vert1=del_vert1, del_vert2=del_vert2,
             npart=self.ntotal, nvert=self.nvert)
         if len(self.points) == 3:
