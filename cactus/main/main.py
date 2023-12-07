@@ -114,6 +114,7 @@ class CaCTus:
             "ASCII_Columns": None,
             "NPZ_Keys": None,
             "Pos_Factor": None,
+            "Roll": [0., 0., 0.],
             "Subbox": {
                 "Use": False,
                 "Origin": [0., 0., 0.],
@@ -174,15 +175,14 @@ class CaCTus:
                         "Minmass": None,
                         "Mindens": None,
                         "Minvol": None,
-                        "nbins": 100,
                         "Neval": None
                     },
                     "Filaments": {
-                        "nbins": 100,
+                        "Nbins": 100,
                         "Minvol": None
                     },
                     "Walls": {
-                        "nbins": 100,
+                        "Nbins": 100,
                         "Minvol": None
                     },
                     "Output": None
@@ -272,16 +272,6 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" Siminfo:")
 
-        # self.MPI.mpi_print_zero()
-        # if self._check_param_key(params["Siminfo"], "Origin"):
-        #     self.siminfo["Origin"] = params["Siminfo"]["Origin"]
-        #     if np.isscalar(self.siminfo["Origin"]):
-        #         self.siminfo["Origin"] = [float(self.siminfo["Origin"]),
-        #             float(self.siminfo["Origin"]), float(self.siminfo["Origin"])]
-        #     else:
-        #         self.siminfo["Origin"] = [float(_origin) for _origin in self.siminfo["Origin"]]
-        #     self.MPI.mpi_print_zero(" - Origin \t\t=", self.siminfo["Origin"])
-
         self.siminfo["Boxsize"] = float(params["Siminfo"]["Boxsize"])
         self.siminfo["Ngrid"] = int(params["Siminfo"]["Ngrid"])
 
@@ -352,6 +342,23 @@ class CaCTus:
             if self._check_param_key(params["Particles"], "Pos_Factor"):
                 self.particles["Pos_Factor"] = params["Particles"]["Pos_Factor"]
                 self.MPI.mpi_print_zero(" - Pos_Factor \t=", self.particles["Pos_Factor"])
+
+            if self._check_param_key(params["Particles"], "Roll"):
+                if self.siminfo["Boundary"] != "periodic":
+                    self.ERROR = True
+                    self.MPI.mpi_print_zero(' ERROR: Roll can only non-zero for periodic boundaries.')
+                self.particles["Roll"] = params["Particles"]["Roll"]
+                if np.isscalar(self.particles["Roll"]):
+                    self.particles["Roll"] = [float(self.particles["Roll"]),
+                        float(self.particles["Roll"]), float(self.particles["Roll"])]
+                else:
+                    self.particles["Roll"] = [float(_origin) for _origin in self.particles["Roll"]]
+
+                if any(abs(np.array(self.particles["Roll"])) > self.siminfo["Boxsize"]):
+                    self.ERROR = True
+                    self.MPI.mpi_print_zero(' ERROR: abs(Roll) cannot be greater than boxsize.')
+
+                self.MPI.mpi_print_zero(" - Roll \t\t=", self.particles["Roll"])
 
             if self._check_param_key(params["Particles"], "Subbox"):
                 self.particles["Subbox"]["Use"] = True
@@ -504,7 +511,6 @@ class CaCTus:
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minmass"])
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Mindens"])
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minvol"])
-                    self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Nbins"])
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Neval"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Neval"])
 
                     self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
@@ -529,7 +535,6 @@ class CaCTus:
                     self.MPI.mpi_print_zero(" --- Minmass\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"])
                     self.MPI.mpi_print_zero(" --- Mindens\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"])
                     self.MPI.mpi_print_zero(" --- Minvol\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"])
-                    self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Nbins"])
                     self.MPI.mpi_print_zero(" --- Neval\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Neval"])
 
                     self.MPI.mpi_print_zero()
@@ -603,24 +608,6 @@ class CaCTus:
 
     def _get_npart(self):
         """Get the number of particles."""
-        # ymin, ymax = 0.-self.siminfo["Buffer_Length"], self.siminfo["Boxsize"]+self.siminfo["Buffer_Length"]
-        # zmin, zmax = 0.-self.siminfo["Buffer_Length"], self.siminfo["Boxsize"]+self.siminfo["Buffer_Length"]
-        # if self.MPI.rank == 0:
-        #     xmin, xmax = self.SBX.limits[0]-self.siminfo["Buffer_Length"], self.SBX.limits[1]
-        #     cond = np.where((self.particles["x"] >= xmin) & (self.particles["y"] >= ymin) &
-        #         (self.particles["z"] >= zmin) & (self.particles["x"] < xmax) &
-        #         (self.particles["y"] <= ymax) & (self.particles["z"] <= zmax))[0]
-        # elif self.MPI.rank == self.MPI.size - 1:
-        #     xmin, xmax = self.SBX.limits[0], self.SBX.limits[1]+self.siminfo["Buffer_Length"]
-        #     cond = np.where((self.particles["x"] >= xmin) & (self.particles["y"] >= ymin) &
-        #         (self.particles["z"] >= zmin) & (self.particles["x"] <= xmax) &
-        #         (self.particles["y"] <= ymax) & (self.particles["z"] <= zmax))[0]
-        # else:
-        #     xmin, xmax = self.SBX.limits[0], self.SBX.limits[1]
-        #     cond = np.where((self.particles["x"] >= xmin) & (self.particles["y"] >= ymin) &
-        #         (self.particles["z"] >= zmin) & (self.particles["x"] < xmax) &
-        #         (self.particles["y"] <= ymax) & (self.particles["z"] <= zmax))[0]
-        # self.particles["npart"] = self.MPI.sum(len(cond))
         self.particles["npart"] = self.MPI.sum(len(self.particles["x"]))
         if self.MPI.rank == 0:
             self.MPI.send(self.particles["npart"], tag=11)
@@ -632,7 +619,7 @@ class CaCTus:
     def _particle_mass(self):
         """Compute particle mass."""
         Omega_m = self.cosmo["Omega_m"]
-        boxsize = self.siminfo["Boxsize"]+2.*self.siminfo["Buffer_Length"]
+        boxsize = self.siminfo["Boxsize"]#+2.*self.siminfo["Buffer_Length"]
         self._get_npart()
         npart = self.particles["npart"]
         self.particles["mass"] = src.density.average_mass_per_cell(Omega_m, boxsize, npart**(1./3.))
@@ -685,6 +672,49 @@ class CaCTus:
         self.particles["z"] = data[:,2]
         self._particle_range()
         self.MPI.wait()
+
+        self._particle_mass()
+        self.MPI.mpi_print_zero()
+        self.MPI.mpi_print_zero(" -> NPart     : %i " % self.particles["npart"])
+        self.MPI.mpi_print_zero(" -> Mass      : %.4e 10^10 M_solar h^-1" % self.particles["mass"])
+        self.MPI.mpi_print_zero(" -> Mean Sep. : %0.4f " % ((self.siminfo["Boxsize"]+2.*self.siminfo["Buffer_Length"])/((self.particles["npart"])**(1./3.))) )
+
+        if self.particles["Roll"][0] != 0. or self.particles["Roll"][1] != 0. or self.particles["Roll"][2] != 0.:
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" > Roll particle positions by :", self.particles["Roll"])
+            self.MPI.mpi_print_zero()
+
+            if self.particles["Roll"][0] != 0.:
+                self.particles["x"] += self.particles["Roll"][0]
+                cond = np.where(self.particles["x"] < self.siminfo["Boxsize"])[0]
+                self.particles["x"][cond] += self.siminfo["Boxsize"]
+                cond = np.where(self.particles["x"] > self.siminfo["Boxsize"])[0]
+                self.particles["x"][cond] -= self.siminfo["Boxsize"]
+            if self.particles["Roll"][1] != 0.:
+                self.particles["y"] += self.particles["Roll"][1]
+                cond = np.where(self.particles["y"] < self.siminfo["Boxsize"])[0]
+                self.particles["y"][cond] += self.siminfo["Boxsize"]
+                cond = np.where(self.particles["y"] > self.siminfo["Boxsize"])[0]
+                self.particles["y"][cond] -= self.siminfo["Boxsize"]
+            if self.particles["Roll"][2] != 0.:
+                self.particles["z"] += self.particles["Roll"][2]
+                cond = np.where(self.particles["z"] < self.siminfo["Boxsize"])[0]
+                self.particles["z"][cond] += self.siminfo["Boxsize"]
+                cond = np.where(self.particles["z"] > self.siminfo["Boxsize"])[0]
+                self.particles["z"][cond] -= self.siminfo["Boxsize"]
+
+            self._particle_range()
+
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" -> Redistributing particles")
+            data = np.column_stack([self.particles["x"], self.particles["y"], self.particles["z"]])
+            self.SBX.input(data)
+            data = self.SBX.distribute(include_internalbuffer=False)
+            self.particles["x"] = data[:,0]
+            self.particles["y"] = data[:,1]
+            self.particles["z"] = data[:,2]
+            self._particle_range()
 
         if self.particles["Subbox"]["Use"]:
             self.MPI.mpi_print_zero()
@@ -772,12 +802,6 @@ class CaCTus:
             self.particles["z"] = data[:,2]
             self._particle_range()
             self.MPI.wait()
-
-        self._particle_mass()
-        self.MPI.mpi_print_zero()
-        self.MPI.mpi_print_zero(" -> NPart     : %i " % self.particles["npart"])
-        self.MPI.mpi_print_zero(" -> Mass      : %.4e 10^10 M_solar h^-1" % self.particles["mass"])
-        self.MPI.mpi_print_zero(" -> Mean Sep. : %0.4f " % ((self.siminfo["Boxsize"]+2.*self.siminfo["Buffer_Length"])/((self.particles["npart"])**(1./3.))) )
 
         self.time["Particle_End"] = time.time()
 
@@ -1125,7 +1149,7 @@ class CaCTus:
 
         Sf_lim, logSf_lim, dM2 = src.nexus.mpi_get_filam_threshold(Sf, self.density["dens"],
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-            clust_map, self.MPI,  nbins=self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["nbins"])
+            clust_map, self.MPI,  nbins=self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ---> Threshold log10(Sf) = %.4f" % np.log10(Sf_lim))
@@ -1141,7 +1165,7 @@ class CaCTus:
 
         Sw_lim, logSw_lim, dM2 = src.nexus.mpi_get_sheet_threshold(Sw, self.density["dens"],
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-            clust_map, filam_map, self.MPI, nbins=self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["nbins"])
+            clust_map, filam_map, self.MPI, nbins=self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"])
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ---> Threshold log10(Sw) = %.4f" % np.log10(Sw_lim))

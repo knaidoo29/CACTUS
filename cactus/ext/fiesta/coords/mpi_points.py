@@ -275,7 +275,6 @@ class MPI_SortByX:
         self.MPI.wait()
         return ifdist
 
-    
     def distribute(self, include_internalbuffer=False):
         if self._checkifdist() is False:
             for i in range(0, self.MPI.size):
