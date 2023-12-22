@@ -51,7 +51,6 @@ def get_mass_below_logS(S, mass, nbins=100, mask=None):
     return logS_lim, sum_M
 
 
-
 def mpi_get_mass_below_logS(S, mass, MPI, nbins=100, mask=None):
     """Returns the mass contained in signatures values above logS.
 
@@ -201,32 +200,42 @@ def get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens, minmas
         cond = np.where(Sc > Sc_lim)
         binmap[cond] = 1.
 
-        groupID = groups.groupfinder(binmap, periodic=periodic)
-        maxID = np.max(groupID.flatten())
+        sumbinmap = np.sum(binmap)
 
-        group_N = groups.get_ngroup(groupID)
-        group_mass = groups.sum4group(groupID, mass)
-        # true density rho
-        group_dens = group_mass/(dV*group_N)
-        # in units of mean density
-        group_dens /= avgdens
+        if sumbinmap > 0.:
 
-        cond = np.where((group_N >= minpix))[0]
+            groupID = groups.groupfinder(binmap, periodic=periodic)
 
-        Num.append(len(cond))
+            group_N = groups.get_ngroup(groupID)
+            group_mass = groups.sum4group(groupID, mass)
+            # true density rho
+            group_dens = group_mass/(dV*group_N)
+            # in units of mean density
+            group_dens /= avgdens
 
-        group_N = group_N[cond]
-        group_mass = group_mass[cond]
-        group_dens = group_dens[cond]
+            cond = np.where((group_N >= minpix))[0]
 
-        cond = np.where((group_mass >= minmass))[0]
-        Num_mlim.append(len(cond))
+            Num.append(len(cond))
 
-        cond = np.where((group_dens >= mindens))[0]
-        Num_dlim.append(len(cond))
+            group_N = group_N[cond]
+            group_mass = group_mass[cond]
+            group_dens = group_dens[cond]
 
-        cond = np.where((group_mass >= minmass) & (group_dens >= mindens))[0]
-        Num_mlim_dlim.append(len(cond))
+            cond = np.where((group_mass >= minmass))[0]
+            Num_mlim.append(len(cond))
+
+            cond = np.where((group_dens >= mindens))[0]
+            Num_dlim.append(len(cond))
+
+            cond = np.where((group_mass >= minmass) & (group_dens >= mindens))[0]
+            Num_mlim_dlim.append(len(cond))
+
+        else:
+
+            Num.append(0.)
+            Num_mlim.append(0.)
+            Num_dlim.append(0.)
+            Num_mlim_dlim.append(0.)
 
         if Num_mlim[-1] != 0:
             frac = Num_mlim_dlim[-1]/Num_mlim[-1]
@@ -314,12 +323,12 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens,
     logS_lim, sum_M = mpi_get_mass_below_logS(Sc, mass, MPI)
 
     if overide_max_sum_M is None:
-        max_sum_M = np.max(sum_M)
+        max_sum_M = MPI.max(sum_M)
     else:
         max_sum_M = overide_max_sum_M
 
     if overide_min_sum_M is None:
-        min_sum_M = np.min(sum_M)
+        min_sum_M = MPI.min(sum_M)
         if min_sum_M < minmass:
             min_sum_M = minmass
     else:
@@ -346,35 +355,47 @@ def mpi_get_Sc_group_info(Sc, dens, Omega_m, boxsize, ngrid, minvol, mindens,
         cond = np.where(Sc > Sc_lim)
         binmap[cond] = 1.
 
-        groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
+        sumbinmap = MPI.sum(np.sum(binmap))
+        sumbinmap = MPI.broadcast(sumbinmap)
 
-        group_N = groups.mpi_get_ngroup(groupID, MPI)
-        group_mass = groups.mpi_sum4group(groupID, mass, MPI)
+        if sumbinmap > 0.:
 
-        group_N = MPI.broadcast(group_N)
-        group_mass = MPI.broadcast(group_mass)
+            groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
 
-        # true density rho
-        group_dens = group_mass/(dV*group_N)
-        # in units of mean density
-        group_dens /= avgdens
+            group_N = groups.mpi_get_ngroup(groupID, MPI)
+            group_mass = groups.mpi_sum4group(groupID, mass, MPI)
 
-        cond = np.where((group_N >= minpix))[0]
+            group_N = MPI.broadcast(group_N)
+            group_mass = MPI.broadcast(group_mass)
 
-        Num.append(len(cond))
+            # true density rho
+            group_dens = group_mass/(dV*group_N)
+            # in units of mean density
+            group_dens /= avgdens
 
-        group_N = group_N[cond]
-        group_mass = group_mass[cond]
-        group_dens = group_dens[cond]
+            cond = np.where((group_N >= minpix))[0]
 
-        cond = np.where((group_mass >= minmass))[0]
-        Num_mlim.append(len(cond))
+            Num.append(len(cond))
 
-        cond = np.where((group_dens >= mindens))[0]
-        Num_dlim.append(len(cond))
+            group_N = group_N[cond]
+            group_mass = group_mass[cond]
+            group_dens = group_dens[cond]
 
-        cond = np.where((group_mass >= minmass) & (group_dens >= mindens))[0]
-        Num_mlim_dlim.append(len(cond))
+            cond = np.where((group_mass >= minmass))[0]
+            Num_mlim.append(len(cond))
+
+            cond = np.where((group_dens >= mindens))[0]
+            Num_dlim.append(len(cond))
+
+            cond = np.where((group_mass >= minmass) & (group_dens >= mindens))[0]
+            Num_mlim_dlim.append(len(cond))
+
+        else:
+
+            Num.append(0.)
+            Num_mlim.append(0.)
+            Num_dlim.append(0.)
+            Num_mlim_dlim.append(0.)
 
         if Num_mlim[-1] != 0:
             frac = Num_mlim_dlim[-1]/Num_mlim[-1]
@@ -489,7 +510,6 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
     return clust_map
 
 
-
 def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
     minmass, MPI, periodic=True):
     """Apply the cluster significance threshold to find cluster environments.
@@ -560,8 +580,9 @@ def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens
     return clust_map
 
 
-def get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, nbins=100):
-    """Returns the filament significance threshold.
+def get_Sf_group_info(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map, neval=10,
+    overide_min_sum_M=None, overide_max_sum_M=None, periodic=True, verbose=True, prefix=''):
+    """Computes group information for different thresholds of the filament signature.
 
     Parameters
     ----------
@@ -575,39 +596,96 @@ def get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, nbins=100)
         Size of the box.
     ngrid : int
         Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
     clust_map : 3darray
         Binary map of the cluster environments.
-    nbins : int, optional
-        Number of bins used to compute mass squared derivative.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    overide_min_sum_M, overide_max_sum_M : float, optional
+        Overide min/max mass thresholds for computing signature thresholds.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
 
     Returns
     -------
-    Sf_lim : float
-        Filament signature threshold.
-    logSf_lim : array
-        The filament signature thresholds used to compute dM2.
-    dM2 : array
-        Derivative of the cumulated mass squared (i.e the mass contained above
-        a given significance threshold).
+    Sf_lims : array
+        Filament signature limits.
+    SumM : array
+        The sum of masses with filament signatures above the signature threshold.
     """
 
-    mask = np.ones(np.shape(clust_map))
-    cond = np.where(clust_map == 1.)
-    mask[cond] = 0
+    dV = (boxsize/ngrid)**3.
+    minpix = minvol/dV
 
     mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
 
-    logSf_lim, sum_M = get_mass_below_logS(Sf, mass, nbins=nbins, mask=mask)
+    logS_lim, sum_M = get_mass_below_logS(Sf, mass)
 
-    dM2 = abs(fiesta.maths.dfdx(logSf_lim, sum_M**2.))
+    if overide_max_sum_M is None:
+        max_sum_M = np.max(sum_M)
+    else:
+        max_sum_M = overide_max_sum_M
 
-    Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+    if overide_min_sum_M is None:
+        min_sum_M = np.min(sum_M)
+    else:
+        min_sum_m = overide_min_sum_M
 
-    return Sf_lim, logSf_lim, dM2
+    interp_vals = np.linspace(max_sum_M, min_sum_M, neval)
+
+    interp_logS_lim = interp1d(sum_M, logS_lim)
+
+    Sf_lims = 10.**interp_logS_lim(interp_vals)
+
+    SumM = []
+
+    if verbose:
+        print(prefix + "{:>16} | {:>16}".format(*["log10(Sf)", "Sum(Mass)"]))
+        print(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    for Sf_lim in Sf_lims:
+
+        binmap = np.zeros(np.shape(Sf))
+        cond = np.where((Sf > Sf_lim) & (clust_map == 0.))
+        binmap[cond] = 1.
+
+        sumbinmap = np.sum(binmap)
+
+        if sumbinmap > 0.:
+
+            groupID = groups.groupfinder(binmap, periodic=periodic)
+
+            group_N = groups.get_ngroup(groupID)
+            group_mass = groups.sum4group(groupID, mass)
+
+            cond = np.where((group_N >= minpix))[0]
+
+            SumM.append(np.sum(group_mass[cond]))
+
+        else:
+
+            SumM.append(0.)
+
+        if verbose:
+            print(prefix + "{:>16.6} | {:>16.6}".format(*[np.log10(Sf_lim), SumM[-1]]))
+
+    if verbose:
+        print(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    SumM = np.array(SumM)
+
+    return Sf_lims, SumM
 
 
-def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, MPI,
-    nbins=100):
+def get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
+    neval=10, periodic=True, verbose=True, prefix=''):
     """Returns the filament significance threshold.
 
     Parameters
@@ -622,12 +700,20 @@ def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, MPI,
         Size of the box.
     ngrid : int
         Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
     clust_map : 3darray
         Binary map of the cluster environments.
-    nbins : int, optional
-        Number of bins used to compute mass squared derivative.
-    MPI : object
-        MPI object.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
 
     Returns
     -------
@@ -640,23 +726,214 @@ def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, clust_map, MPI,
         a given significance threshold).
     """
 
-    mask = np.ones(np.shape(clust_map))
-    cond = np.where(clust_map == 1.)
-    mask[cond] = 0
+    # mask = np.ones(np.shape(clust_map))
+    # cond = np.where(clust_map == 1.)
+    # mask[cond] = 0
+    #
+    # mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
+    #
+    # logSf_lim, sum_M = get_mass_below_logS(Sf, mass, nbins=nbins, mask=mask)
+    #
+    # dM2 = abs(fiesta.maths.dfdx(logSf_lim, sum_M**2.))
+    #
+    # Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
 
-    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
+    Sf_lims, sumM = get_Sf_group_info(Sf, dens, Omega_m, boxsize, ngrid,
+        minvol, clust_map, neval=neval, periodic=periodic, verbose=verbose,
+        prefix=prefix)
 
-    logSf_lim, sum_M = mpi_get_mass_below_logS(Sf, mass, MPI, nbins=nbins, mask=mask)
+    interp_sumM = interp1d(np.log10(Sf_lims), sumM)
+    logSf_lim = np.linspace(np.log10(Sf_lims[0]), np.log10(Sf_lims[-1]), 1000)
+    M = interp_sumM(logSf_lim)
 
-    dM2 = abs(fiesta.maths.dfdx(logSf_lim, sum_M**2.))
-
+    dM2 = abs(fiesta.maths.dfdx(logSf_lim, M**2.))
     Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
 
     return Sf_lim, logSf_lim, dM2
 
 
-def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map,
-    periodic=True):
+def mpi_get_Sf_group_info(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
+    MPI, neval=10, overide_min_sum_M=None, overide_max_sum_M=None, periodic=True,
+    verbose=True, prefix=''):
+    """Computes group information for different thresholds of the filament signature.
+
+    Parameters
+    ----------
+    Sf : 3darray
+        Filament nexus signature.
+    dens : 3darray
+        Density field.
+    Omega_m : float
+        Matter density.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
+    clust_map : 3darray
+        Binary map of the cluster environments.
+    MPI : object
+        MPI object.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    overide_min_sum_M, overide_max_sum_M : float, optional
+        Overide min/max mass thresholds for computing signature thresholds.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
+
+    Returns
+    -------
+    Sf_lims : array
+        Filament signature limits.
+    SumM : array
+        The sum of masses with filament signatures above the signature threshold.
+    """
+
+    dV = (boxsize/ngrid)**3.
+    minpix = minvol/dV
+
+    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
+
+    logS_lim, sum_M = mpi_get_mass_below_logS(Sf, mass, MPI)
+
+    if overide_max_sum_M is None:
+        max_sum_M = MPI.max(sum_M)
+    else:
+        max_sum_M = overide_max_sum_M
+
+    if overide_min_sum_M is None:
+        min_sum_M = MPI.min(sum_M)
+    else:
+        min_sum_m = overide_min_sum_M
+
+    interp_vals = np.linspace(max_sum_M, min_sum_M, neval)
+
+    interp_logS_lim = interp1d(sum_M, logS_lim)
+
+    Sf_lims = 10.**interp_logS_lim(interp_vals)
+
+    SumM = []
+
+    if verbose:
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16}".format(*["log10(Sf)", "Sum(Mass)"]))
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    for Sf_lim in Sf_lims:
+
+        binmap = np.zeros(np.shape(Sf))
+        cond = np.where((Sf > Sf_lim) & (clust_map == 0.))
+        binmap[cond] = 1.
+
+        sumbinmap = MPI.sum(np.sum(binmap))
+        sumbinmap = MPI.broadcast(sumbinmap)
+
+        if sumbinmap > 0.:
+
+            groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
+
+            group_N = groups.mpi_get_ngroup(groupID, MPI)
+            group_mass = groups.mpi_sum4group(groupID, mass, MPI)
+
+            group_N = MPI.broadcast(group_N)
+            group_mass = MPI.broadcast(group_mass)
+
+            cond = np.where((group_N >= minpix))[0]
+
+            SumM.append(np.sum(group_mass[cond]))
+
+        else:
+
+            SumM.append(0.)
+
+        if verbose:
+            MPI.mpi_print_zero(prefix + "{:>16.6} | {:>16.6}".format(*[np.log10(Sf_lim), SumM[-1]]))
+
+    if verbose:
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    SumM = np.array(SumM)
+
+    return Sf_lims, SumM
+
+
+def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
+    MPI, neval=10, periodic=True, verbose=True, prefix=''):
+    """Returns the filament significance threshold.
+
+    Parameters
+    ----------
+    Sf : 3darray
+        Filament nexus signature.
+    dens : 3darray
+        Density field.
+    Omega_m : float
+        Matter density.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
+    clust_map : 3darray
+        Binary map of the cluster environments.
+    MPI : object
+        MPI object.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
+
+    Returns
+    -------
+    Sf_lim : float
+        Filament signature threshold.
+    logSf_lim : array
+        The filament signature thresholds used to compute dM2.
+    dM2 : array
+        Derivative of the cumulated mass squared (i.e the mass contained above
+        a given significance threshold).
+    """
+
+    # mask = np.ones(np.shape(clust_map))
+    # cond = np.where(clust_map == 1.)
+    # mask[cond] = 0
+    #
+    # mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
+    #
+    # logSf_lim, sum_M = mpi_get_mass_below_logS(Sf, mass, MPI, nbins=nbins, mask=mask)
+    #
+    # dM2 = abs(fiesta.maths.dfdx(logSf_lim, sum_M**2.))
+    #
+    # Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+
+    Sf_lims, sumM = mpi_get_Sf_group_info(Sf, dens, Omega_m, boxsize, ngrid,
+        minvol, clust_map, MPI, neval=neval, periodic=periodic, verbose=verbose,
+        prefix=prefix)
+
+    interp_sumM = interp1d(np.log10(Sf_lims), sumM)
+    logSf_lim = np.linspace(np.log10(Sf_lims[0]), np.log10(Sf_lims[-1]), 1000)
+    M = interp_sumM(logSf_lim)
+
+    dM2 = abs(fiesta.maths.dfdx(logSf_lim, M**2.))
+    Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+
+    return Sf_lim, logSf_lim, dM2
+
+
+def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, periodic=True):
     """Apply the filament significance threshold to find filament environments.
     Only environment groups larger than the minvol are kept.
 
@@ -759,8 +1036,115 @@ def mpi_get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, MPI,
     return filam_map
 
 
-def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map, filam_map,
-    nbins=100):
+def get_Sw_group_info(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
+    filam_map, neval=10, overide_min_sum_M=None, overide_max_sum_M=None,
+    periodic=True, verbose=True, prefix=''):
+    """Computes group information for different thresholds of the sheet signature.
+
+    Parameters
+    ----------
+    Sf : 3darray
+        Filament nexus signature.
+    dens : 3darray
+        Density field.
+    Omega_m : float
+        Matter density.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
+    clust_map : 3darray
+        Binary map of the cluster environments.
+    filam_map : 3darray
+        Binary map of the filament environments.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    overide_min_sum_M, overide_max_sum_M : float, optional
+        Overide min/max mass thresholds for computing signature thresholds.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
+
+    Returns
+    -------
+    Sw_lims : array
+        Sheet signature limits.
+    SumM : array
+        The sum of masses with sheet signatures above the signature threshold.
+    """
+
+    dV = (boxsize/ngrid)**3.
+    minpix = minvol/dV
+
+    mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
+
+    logS_lim, sum_M = get_mass_below_logS(Sw, mass)
+
+    if overide_max_sum_M is None:
+        max_sum_M = np.max(sum_M)
+    else:
+        max_sum_M = overide_max_sum_M
+
+    if overide_min_sum_M is None:
+        min_sum_M = np.min(sum_M)
+    else:
+        min_sum_m = overide_min_sum_M
+
+    interp_vals = np.linspace(max_sum_M, min_sum_M, neval)
+
+    interp_logS_lim = interp1d(sum_M, logS_lim)
+
+    Sw_lims = 10.**interp_logS_lim(interp_vals)
+
+    SumM = []
+
+    if verbose:
+        print(prefix + "{:>16} | {:>16}".format(*["log10(Sw)", "Sum(Mass)"]))
+        print(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    for Sw_lim in Sw_lims:
+
+        binmap = np.zeros(np.shape(Sw))
+        cond = np.where((Sw > Sw_lim) & (clust_map == 0.) & (filam_map == 0.))
+        binmap[cond] = 1.
+
+        sumbinmap = np.sum(binmap)
+
+        if sumbinmap > 0.:
+
+            groupID = groups.groupfinder(binmap, periodic=periodic)
+
+            group_N = groups.get_ngroup(groupID)
+            group_mass = groups.sum4group(groupID, mass)
+
+            cond = np.where((group_N >= minpix))[0]
+
+            SumM.append(np.sum(group_mass[cond]))
+
+        else:
+
+            SumM.append(0.)
+
+        if verbose:
+            print(prefix + "{:>16.6} | {:>16.6}".format(*[np.log10(Sw_lim), SumM[-1]]))
+
+    if verbose:
+        print(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    SumM = np.array(SumM)
+
+    return Sw_lims, SumM
+
+
+def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
+    filam_map, neval=10, periodic=True, verbose=True, prefix=''):
     """Returns the sheet significance threshold.
 
     Parameters
@@ -775,12 +1159,22 @@ def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map, filam_map,
         Size of the box.
     ngrid : int
         Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
     clust_map : 3darray
         Binary map of the cluster environments.
     filam_map : 3darray
         Binary map of the filament environments.
-    nbins : int, optional
-        Number of bins used to compute mass squared derivative.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
 
     Returns
     -------
@@ -793,23 +1187,147 @@ def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map, filam_map,
         a given significance threshold).
     """
 
-    mask = np.ones(np.shape(clust_map))
-    cond = np.where((clust_map == 1.) | (filam_map == 1.))
-    mask[cond] = 0
+    # mask = np.ones(np.shape(clust_map))
+    # cond = np.where((clust_map == 1.) | (filam_map == 1.))
+    # mask[cond] = 0
+    #
+    # mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
+    #
+    # logSw_lim, sum_M = get_mass_below_logS(Sw, mass, nbins=nbins, mask=mask)
+    #
+    # dM2 = abs(fiesta.maths.dfdx(logSw_lim, sum_M**2.))
+    #
+    # Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
 
-    mass = density.dens2mass(dens, Omega_m, boxsize, ngrid)
+    Sw_lims, sumM = get_Sw_group_info(Sw, dens, Omega_m, boxsize, ngrid,
+        minvol, clust_map, filam_map, neval=neval, periodic=periodic, verbose=verbose,
+        prefix=prefix)
 
-    logSw_lim, sum_M = get_mass_below_logS(Sw, mass, nbins=nbins, mask=mask)
+    interp_sumM = interp1d(np.log10(Sw_lims), sumM)
+    logSw_lim = np.linspace(np.log10(Sw_lims[0]), np.log10(Sw_lims[-1]), 1000)
+    M = interp_sumM(logSw_lim)
 
-    dM2 = abs(fiesta.maths.dfdx(logSw_lim, sum_M**2.))
-
+    dM2 = abs(fiesta.maths.dfdx(logSw_lim, M**2.))
     Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
 
     return Sw_lim, logSw_lim, dM2
 
 
-def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map,
-    filam_map, MPI, nbins=100):
+def mpi_get_Sw_group_info(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
+    filam_map, MPI, neval=10, overide_min_sum_M=None, overide_max_sum_M=None,
+    periodic=True, verbose=True, prefix=''):
+    """Computes group information for different thresholds of the wall signature.
+
+    Parameters
+    ----------
+    Sf : 3darray
+        Filament nexus signature.
+    dens : 3darray
+        Density field.
+    Omega_m : float
+        Matter density.
+    boxsize : float
+        Size of the box.
+    ngrid : int
+        Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
+    clust_map : 3darray
+        Binary map of the cluster environments.
+    filam_map : 3darray
+        Binary map of the filament environments.
+    MPI : object
+        MPI object.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    overide_min_sum_M, overide_max_sum_M : float, optional
+        Overide min/max mass thresholds for computing signature thresholds.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
+
+    Returns
+    -------
+    Sw_lims : array
+        Sheet signature limits.
+    SumM : array
+        The sum of masses with sheet signatures above the signature threshold.
+    """
+
+    dV = (boxsize/ngrid)**3.
+    minpix = minvol/dV
+
+    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
+
+    logS_lim, sum_M = mpi_get_mass_below_logS(Sw, mass, MPI)
+
+    if overide_max_sum_M is None:
+        max_sum_M = MPI.max(sum_M)
+    else:
+        max_sum_M = overide_max_sum_M
+
+    if overide_min_sum_M is None:
+        min_sum_M = MPI.min(sum_M)
+    else:
+        min_sum_m = overide_min_sum_M
+
+    interp_vals = np.linspace(max_sum_M, min_sum_M, neval)
+
+    interp_logS_lim = interp1d(sum_M, logS_lim)
+
+    Sw_lims = 10.**interp_logS_lim(interp_vals)
+
+    SumM = []
+
+    if verbose:
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16}".format(*["log10(Sw)", "Sum(Mass)"]))
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    for Sw_lim in Sw_lims:
+
+        binmap = np.zeros(np.shape(Sw))
+        cond = np.where((Sw > Sw_lim) & (clust_map == 0.) & (filam_map == 0.))
+        binmap[cond] = 1.
+
+        sumbinmap = MPI.sum(np.sum(binmap))
+        sumbinmap = MPI.broadcast(sumbinmap)
+
+        if sumbinmap > 0.:
+
+            groupID = groups.mpi_groupfinder(binmap, MPI, periodic=periodic)
+
+            group_N = groups.mpi_get_ngroup(groupID, MPI)
+            group_mass = groups.mpi_sum4group(groupID, mass, MPI)
+
+            group_N = MPI.broadcast(group_N)
+            group_mass = MPI.broadcast(group_mass)
+
+            cond = np.where((group_N >= minpix))[0]
+
+            SumM.append(np.sum(group_mass[cond]))
+
+        else:
+
+            SumM.append(0.)
+
+        if verbose:
+            MPI.mpi_print_zero(prefix + "{:>16.6} | {:>16.6}".format(*[np.log10(Sw_lim), SumM[-1]]))
+
+    if verbose:
+        MPI.mpi_print_zero(prefix + "{:>16} | {:>16}".format(*["-"*16, "-"*16]))
+
+    SumM = np.array(SumM)
+
+    return Sw_lims, SumM
+
+
+def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
+    filam_map, MPI, neval=10, periodic=True, verbose=True, prefix=''):
     """Returns the sheet significance threshold.
 
     Parameters
@@ -824,14 +1342,24 @@ def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map,
         Size of the box.
     ngrid : int
         Grid size along each axis.
+    minvol : float
+        Minimum volume for a group.
     clust_map : 3darray
         Binary map of the cluster environments.
     filam_map : 3darray
         Binary map of the filament environments.
-    nbins : int, optional
-        Number of bins used to compute mass squared derivative.
     MPI : object
         MPI object.
+    neval : int, optional
+        Number of signature threshold levels to compute group information. Levels
+        are equal along a mass weighted cumulative distribution of the cluster
+        signature.
+    periodic : bool, optional
+        Periodic boundary.
+    verbose : bool, optional
+        Print progress statements.
+    prefix : str, optional
+        Print statement prefix.
 
     Returns
     -------
@@ -844,16 +1372,27 @@ def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, clust_map,
         a given significance threshold).
     """
 
-    mask = np.ones(np.shape(clust_map))
-    cond = np.where((clust_map == 1.) | (filam_map == 1.))
-    mask[cond] = 0
+    # mask = np.ones(np.shape(clust_map))
+    # cond = np.where((clust_map == 1.) | (filam_map == 1.))
+    # mask[cond] = 0
+    #
+    # mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
+    #
+    # logSw_lim, sum_M = mpi_get_mass_below_logS(Sw, mass, MPI, nbins=nbins, mask=mask)
+    #
+    # dM2 = abs(fiesta.maths.dfdx(logSw_lim, sum_M**2.))
+    #
+    # Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
 
-    mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
+    Sw_lims, sumM = mpi_get_Sw_group_info(Sw, dens, Omega_m, boxsize, ngrid,
+        minvol, clust_map, filam_map, MPI, neval=neval, periodic=periodic,
+        verbose=verbose, prefix=prefix)
 
-    logSw_lim, sum_M = mpi_get_mass_below_logS(Sw, mass, MPI, nbins=nbins, mask=mask)
+    interp_sumM = interp1d(np.log10(Sw_lims), sumM)
+    logSw_lim = np.linspace(np.log10(Sw_lims[0]), np.log10(Sw_lims[-1]), 1000)
+    M = interp_sumM(logSw_lim)
 
-    dM2 = abs(fiesta.maths.dfdx(logSw_lim, sum_M**2.))
-
+    dM2 = abs(fiesta.maths.dfdx(logSw_lim, M**2.))
     Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
 
     return Sw_lim, logSw_lim, dM2

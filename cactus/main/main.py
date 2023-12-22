@@ -178,12 +178,12 @@ class CaCTus:
                         "Neval": None
                     },
                     "Filaments": {
-                        "Nbins": 100,
-                        "Minvol": None
+                        "Minvol": None,
+                        "Neval": 100,
                     },
                     "Walls": {
-                        "Nbins": 100,
-                        "Minvol": None
+                        "Minvol": None,
+                        "Neval": 100,
                     },
                     "Output": None
                 }
@@ -341,7 +341,7 @@ class CaCTus:
 
             if self._check_param_key(params["Particles"], "Pos_Factor"):
                 self.particles["Pos_Factor"] = params["Particles"]["Pos_Factor"]
-                self.MPI.mpi_print_zero(" - Pos_Factor \t=", self.particles["Pos_Factor"])
+                self.MPI.mpi_print_zero(" - Pos_Factor \t\t=", self.particles["Pos_Factor"])
 
             if self._check_param_key(params["Particles"], "Roll"):
                 if self.siminfo["Boundary"] != "periodic":
@@ -513,11 +513,11 @@ class CaCTus:
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Minvol"])
                     self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Neval"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Clusters"]["Neval"])
 
-                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
                     self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minvol"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Minvol"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Neval"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Filaments"]["Neval"])
 
-                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Nbins"])
                     self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"] = float(params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Minvol"])
+                    self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Neval"] = int(params["CosmicWeb"]["Nexus"]["Thresholds"]["Walls"]["Neval"])
 
                     self.cosmicweb["Nexus"]["Thresholds"]["Output"] = params["CosmicWeb"]["Nexus"]["Thresholds"]["Output"]
 
@@ -541,15 +541,15 @@ class CaCTus:
                     self.MPI.mpi_print_zero(" -- Filaments")
 
                     self.MPI.mpi_print_zero()
-                    self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
                     self.MPI.mpi_print_zero(" --- Minvol\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minvol"])
+                    self.MPI.mpi_print_zero(" --- Neval\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Neval"])
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Walls")
 
                     self.MPI.mpi_print_zero()
-                    self.MPI.mpi_print_zero(" --- Nbins\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"])
                     self.MPI.mpi_print_zero(" --- Minvol\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"])
+                    self.MPI.mpi_print_zero(" --- Neval\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Neval"])
 
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Output"])
@@ -1146,10 +1146,13 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ### Computing Filament Environment")
         self.MPI.mpi_print_zero(" ### ==============================")
+        self.MPI.mpi_print_zero()
 
         Sf_lim, logSf_lim, dM2 = src.nexus.mpi_get_filam_threshold(Sf, self.density["dens"],
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-            clust_map, self.MPI,  nbins=self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Nbins"])
+            self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Minvol"],
+            clust_map, self.MPI,  neval=self.cosmicweb["Nexus"]["Thresholds"]["Filaments"]["Neval"],
+            periodic=self.siminfo["Periodic"], verbose=True, prefix=' ---> ')
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ---> Threshold log10(Sf) = %.4f" % np.log10(Sf_lim))
@@ -1162,10 +1165,13 @@ class CaCTus:
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ### Computing Sheet Environment")
         self.MPI.mpi_print_zero(" ### ===========================")
-
+        self.MPI.mpi_print_zero()
+        
         Sw_lim, logSw_lim, dM2 = src.nexus.mpi_get_sheet_threshold(Sw, self.density["dens"],
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
-            clust_map, filam_map, self.MPI, nbins=self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Nbins"])
+            self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"],
+            clust_map, filam_map, self.MPI, neval=self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Neval"],
+            periodic=self.siminfo["Periodic"], verbose=True, prefix=' ---> ')
 
         self.MPI.mpi_print_zero()
         self.MPI.mpi_print_zero(" ---> Threshold log10(Sw) = %.4f" % np.log10(Sw_lim))
