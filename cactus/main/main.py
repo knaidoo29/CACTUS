@@ -1166,7 +1166,7 @@ class CaCTus:
         self.MPI.mpi_print_zero(" ### Computing Sheet Environment")
         self.MPI.mpi_print_zero(" ### ===========================")
         self.MPI.mpi_print_zero()
-        
+
         Sw_lim, logSw_lim, dM2 = src.nexus.mpi_get_sheet_threshold(Sw, self.density["dens"],
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
             self.cosmicweb["Nexus"]["Thresholds"]["Walls"]["Minvol"],
@@ -1186,7 +1186,7 @@ class CaCTus:
         self.MPI.mpi_print_zero(" ### ==========================")
 
         self.cosmicweb["web_flag"] = src.nexus.get_cweb_map(clust_map, filam_map, sheet_map)
-
+        
         self.MPI.mpi_print_zero()
         fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
         self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to "+fname)

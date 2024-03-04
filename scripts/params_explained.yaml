@@ -159,13 +159,13 @@ CosmicWeb:
       # Filament thresholds
       Filaments:
         # Number of bins to compute dM^2/dlogSf
-        Nbins: 100
+        Neval: 100
         # Minimum volume to remove spurious features.
         Minvol: 1
       # Wall thresholds
       Walls:
         # Number of bins to compute dM^2/dlogSw
-        Nbins: 100
+        Neval: 100
         # Minimum volume to remove spurious features.
         Minvol: 1
       # Nexus cosmic web classification output filename
