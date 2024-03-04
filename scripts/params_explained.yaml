@@ -1,0 +1,172 @@
+# Define basic cosmological parameters
+Cosmology:
+  # Hubble constant given in km.s^-1.Mpc^-1
+  H0: 70
+  # Dimensionless matter density
+  Omega_m: 0.3
+
+# Define basic box, grid and boundary conditions.
+Siminfo:
+  # Size of the Box
+  Boxsize: 75.
+  # Grid partition
+  Ngrid: 128
+  # [Optional] Boundary conditions:
+  #   - 'periodic' (default)
+  #   - 'neumann'
+  #   - 'dirichlet'
+  Boundary: periodic
+
+# Particle file information [Optional]
+Particles:
+  # File type, either
+  #   - 'NPZ': numpy format.
+  #   - 'ASCII': ascii format.
+  #   - 'Gadget': Gadget snapshot file
+  Type: NPZ
+  # Text file with name of particle files. Put Null if you wish to specify
+  # filenames with prefixes, etc.
+  Filelist: Null
+  # ASCII/NPZ
+  # ---------
+  # if 'Filelist: Null' then for 'NPZ' or 'ASCII' specify the following.
+  # For the following filenames are assumed to follow the format
+  # Fileprefix+{0-Nfiles}+Filesuffix and will always assume the filenames begin
+  # with 0. So for below we would have files 'particles_0.npz' and
+  # 'particles_1.npz'
+  Fileprefix: particles_
+  Filesuffix: .npz
+  # Number of files
+  Nfiles: 2
+  # For NPZ format specify the keys for the x, y, z coordinates.
+  NPZ_Keys: ["x", "y", "z"]
+  # For ASCII format specify yhe columns for the x, y, z coordinate.
+  ASCII_Columns: [0, 1, 2]
+  # Gadget
+  # ------
+  # Specify the filename prefix which is assumed to follow the format: Fname.0,
+  # Fname.1 and so on. For the below this will be 'particles.0' and 'particles.1'.
+  Fname: particles
+  Nfiles: 2
+  # Specify a multiplication factor to be used on the positions of the particles.
+  # This is important because Gadget files often give coordinates in Kpc/h rather
+  # than Mpc/h as is more conventional for cosmic web analysis.
+  Pos_Factor: 1
+  # For particles with periodic boundaries you can roll the particles along each
+  # axis. Either you roll all axis by one value or you can specify each axis
+  # [0., 0., 0.] for x, y, z.
+  Roll: 0.
+  # Subbox
+  # ------
+  # If you actually only want to compute something on a subset of the particles
+  # then you can use Subbox which will extract particles, including a buffer
+  # region
+  Subbox:
+    # Origin for the Subbox
+    Origin: 0.
+    # Subbox boxsize
+    Boxsize: 50.
+    # Buffer region outside the Subbox [Optional]
+    # Length of the buffer region
+    Buffer_Length: 30.
+    # Buffer particle type, either 'periodic' or 'random'
+    Buffer_Type: periodic
+
+
+# Density computation [Optional]
+Density:
+  # Density type:
+  #   - particle2mesh methods:
+  #     - NGP: Nearest Grid Point
+  #     - CIC: Cloud in Cell
+  #     - TSC: Triangular Shaped Cloud
+  #   - DTFE: Delaunay tesselation
+  Type: TSC
+  # File output prefix
+  Saveas: dens_
+  # DTFE
+  # ----
+  # Split the slabs along y and z axis. Or to specify split in each axis x, y
+  # and z then write a list [1, 2, 2]
+  MPI_Split: 2
+  # Buffer Type particles:
+  #   - periodic: periodic buffer particles
+  #   - random: random buffer particles
+  #   - internal: internal buffer particles, meaning particles between slabs are
+  #     buffering each slab in the MPI computation.
+  Buffer_Type: internal
+  # Buffer Length
+  Buffer_Length: 30.
+  # Subsampling : for each cell, the DTFE is computed on a grid with
+  # subsampling^3 equally spaced on a 3D cartesian grid.
+  Subsampling: 4
+
+# Cosmic web computation
+CosmicWeb:
+  # Density filename. For the following this would be 'dens_0.npz' and
+  # 'dens_1.npz'.
+  Density_Prefix: dens_
+  Density_Nfiles: 2
+  # [Optional] filter to apply to the input density field
+  Filter:
+    # Filter type: 'Tophat', 'Gaussian' or 'LogGaussian'
+    Type: Gaussian
+    # Filter radius
+    R: 0.5
+  # Cosmic Web classification type:
+  #   - Tweb: Tidal field
+  #   - Nexus: NEXUS
+  Type: Tweb
+  # Tweb
+  # ----
+  Tweb:
+    # Eigenvalue threshold
+    Threshold: 0.2
+    # Classification output filename
+    Output: cweb_
+  # Nexus
+  # -----
+  Nexus:
+    # Signature computation
+    Signature:
+      # Base radius smoothing
+      R0: 1.
+      # Maximum power to calculate the cosmic web: i.e. sqrt(2)^N * R0
+      Nmax: 5
+      # List to indicate whether smoothing is performed in real or log space
+      # for clusters, filaments and walls.
+      Logsmooth: [False, True, True]
+      # Output filename for the signature values
+      Output: nexus_sig_
+    # Threshold information
+    Thresholds:
+      # Signature file information
+      SigFile:
+        # Signature file prefix
+        Prefix: nexus_sig_
+        # Number of files
+        Nfiles: 2
+      # Cluster thresholds
+      Clusters:
+        # Minmass given in 10^10 Msun/h
+        Minmass: 1000
+        # Minimum density
+        Mindens: 50
+        # Minimum volume to remove spurious features.
+        Minvol: 1
+        # Number of evaluations to make
+        Neval: 20
+      # Filament thresholds
+      Filaments:
+        # Number of bins to compute dM^2/dlogSf
+        Neval: 100
+        # Minimum volume to remove spurious features.
+        Minvol: 1
+      # Wall thresholds
+      Walls:
+        # Number of bins to compute dM^2/dlogSw
+        Neval: 100
+        # Minimum volume to remove spurious features.
+        Minvol: 1
+      # Nexus cosmic web classification output filename
+      Output: cweb_nexus_

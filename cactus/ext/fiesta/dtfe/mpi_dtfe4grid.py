@@ -1,5 +1,5 @@
+import subprocess
 import numpy as np
-import matplotlib.pylab as plt
 
 from ... import shift
 
@@ -10,9 +10,9 @@ from . import dtfe4grid
 
 
 def mpi_dtfe4grid2D(x, y, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
-                    buffer_type=None, buffer_length=0., buffer_val=0., buffer_mass=None,
-                    origin=0., subsampling=4, outputgrid=False, calcdens=True,
-                    verbose=False, verbose_prefix=""):
+    buffer_type=None, buffer_length=0., buffer_val=0., buffer_mass=None,
+    origin=0., subsampling=4, outputgrid=False, calcdens=True, verbose=False,
+    verbose_prefix=""):
     """Returns the Delaunay tesselation density or field on a grid.
 
     Parameters
@@ -120,7 +120,7 @@ def mpi_dtfe4grid2D(x, y, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         if len(_data[0]) == 4:
             _m = np.concatenate([_data[:,3], np.ones(npart)*buffer_mass])
     elif buffer_type == 'periodic':
-        _data = boundary.mpi_buffer_periodic_2D(data, xboxsize, limits, buffer_length, MPI)
+        _data = boundary.mpi_buffer_periodic_2D(data, boxsize, buffer_length, MPI, origin=origin)
         _x, _y, _f = _data[:,0], _data[:,1], _data[:,2]
         if len(_data[0]) == 4:
             _m = _data[:,3]
@@ -174,9 +174,8 @@ def mpi_dtfe4grid2D(x, y, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
 
 
 def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
-                    buffer_type=None, buffer_length=0., buffer_val=0.,
-                    origin=0., subsampling=4, outputgrid=False, calcdens=True,
-                    verbose=False, verbose_prefix=""):
+    buffer_type=None, buffer_length=0., buffer_val=0., buffer_mass=1., origin=0., subsampling=4,
+    outputgrid=False, calcdens=True, flush=True, verbose=False, verbose_prefix="",):
     """Returns the Delaunay tesselation density or field on a grid.
 
     Parameters
@@ -204,6 +203,8 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         Buffer length.
     buffer_val : float, optional
         Value given to random buffer particles.
+    buffer_mass : float, optional
+        Mass of buffer particles.
     subsampling : int, optional
         The pixel subsampling rate. Each pixel is evaluated subsampling^2 points
         on a grid within each pixel. This is to ensure each pixel is assigned a
@@ -212,6 +213,8 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         Outputs coordinate grid.
     calcdens : bool, optional
         Calculate density.
+    flush : bool, optional
+        Temporarily save data and load it up sequentially.
     verbose : bool, optional
         If True prints out statements
     verbose_prefix : str, optional
@@ -267,9 +270,9 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
     # sort coordinates and distribute by coordinate system
     MPI_SBX = coords.MPI_SortByX(MPI)
     MPI_SBX.settings(xboxsize, nxgrid, origin=xorigin)
-    MPI_SBX.input(data)
+    #MPI_SBX.input(data)
     MPI_SBX.limits4grid()
-    # data = MPI_SBX.distribute()
+    #data = MPI_SBX.distribute(include_internalbuffer=True)
     limits = [MPI_SBX.limits[0], MPI_SBX.limits[1], yorigin, yorigin+yboxsize, zorigin, zorigin+zboxsize]
     # add buffer particles.
     if buffer_type == 'random':
@@ -283,7 +286,13 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         if len(_data[0]) == 5:
             _m = np.concatenate([_data[:,4], np.ones(len(xr))*buffer_mass])
     elif buffer_type == 'periodic':
-        _data = boundary.mpi_buffer_periodic_3D(data, xboxsize, limits, buffer_length, MPI)
+        _data = boundary.mpi_buffer_periodic_3D(data, boxsize, buffer_length, MPI, origin=origin)
+        _x, _y, _z = _data[:,0], _data[:,1], _data[:,2]
+        _f = _data[:,3]
+        if len(data[0]) == 5:
+            _m = _data[:,4]
+    elif buffer_type == 'internal':
+        _data = boundary.mpi_buffer_internal_3D(data, boxsize, buffer_length, MPI, origin=origin)
         _x, _y, _z = _data[:,0], _data[:,1], _data[:,2]
         _f = _data[:,3]
         if len(data[0]) == 5:
@@ -310,28 +319,77 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         ys1, ys2 = MPI.split(len(ygrid), size=MPI_split[1])
         zs1, zs2 = MPI.split(len(zgrid), size=MPI_split[2])
     xs1, ys1, zs1 = np.meshgrid(xs1, ys1, zs1, indexing='ij')
+    xshape = np.shape(xs1)
     xs1, ys1, zs1 = xs1.flatten(), ys1.flatten(), zs1.flatten()
     xs2, ys2, zs2 = np.meshgrid(xs2, ys2, zs2, indexing='ij')
     xs2, ys2, zs2 = xs2.flatten(), ys2.flatten(), zs2.flatten()
     # calculate dtfe
+    if flush:
+        ii = np.arange(len(xs1))
+        ii = ii.reshape(xshape)
+        xs1 = xs1.reshape(xshape)
+        ys1 = ys1.reshape(xshape)
+        zs1 = zs1.reshape(xshape)
+        xs2 = xs2.reshape(xshape)
+        ys2 = ys2.reshape(xshape)
+        zs2 = zs2.reshape(xshape)
+        for i1 in range(0, len(ii)):
+            _xmin, _xmax = xedges[xs1[i1, 0, 0]], xedges[xs2[i1, 0, 0]]
+            c0 = np.where((_x >= _xmin-buffer_length) & (_x <= _xmax+buffer_length))[0]
+            for i2 in range(0, len(ii[i1])):
+                _ymin, _ymax = yedges[ys1[0, i2, 0]], yedges[ys2[0, i2, 0]]
+                c1 = np.where((_y[c0] >= _ymin-buffer_length) & (_y[c0] <= _ymax+buffer_length))[0]
+                for i3 in range(0, len(ii[i1,i2])):
+                    _zmin, _zmax = zedges[zs1[0, 0, i3]], zedges[zs2[0, 0, i3]]
+                    c2 = np.where((_z[c0[c1]] >= _zmin-buffer_length) & (_z[c0[c1]] <= _zmax+buffer_length))[0]
+                    i = ii[i1, i2, i3]
+                    _xx, _yy, _zz = _x[c0[c1[c2]]], _y[c0[c1[c2]]], _z[c0[c1[c2]]]
+                    if calcdens:
+                        _ff = None
+                        _mm = _m[c0[c1[c2]]]
+                    else:
+                        _ff = _f[c0[c1[c2]]]
+                        _mm = None
+                    np.savez('temp_dtfe_MPI_%i_%i.npz'%(MPI.rank, i),
+                        _xx=_xx, _yy=_yy, _zz=_zz, _ff=_ff, _mm=_mm)
+                    if verbose:
+                        MPI.mpi_print_zero(verbose_prefix+"Saving partitioned particles:", "%i/%i" % (i+1,int(xshape[0]
+*xshape[1]*xshape[1])), "Npart=%i" % len(_xx))
+        del _x
+        del _y
+        del _z
+        if calcdens:
+            del _m
+        else:
+            del _f
+    xs1, ys1, zs1 = xs1.flatten(), ys1.flatten(), zs1.flatten()
+    xs2, ys2, zs2 = xs2.flatten(), ys2.flatten(), zs2.flatten()
     for i in range(0, len(xs1)):
         _xmin, _xmax = xedges[xs1[i]], xedges[xs2[i]]
         _ymin, _ymax = yedges[ys1[i]], yedges[ys2[i]]
         _zmin, _zmax = zedges[zs1[i]], zedges[zs2[i]]
         _nxgrid, _nygrid, _nzgrid = xs2[i]-xs1[i], ys2[i]-ys1[i], zs2[i]-zs1[i]
-        cond = np.where((_x >= _xmin-buffer_length) &
-                        (_x < _xmax+buffer_length) &
-                        (_y >= _ymin-buffer_length) &
-                        (_y < _ymax+buffer_length) &
-                        (_z >= _zmin-buffer_length) &
-                        (_z < _zmax+buffer_length))[0]
-        _xx, _yy, _zz = _x[cond], _y[cond], _z[cond]
-        if calcdens:
-            _ff = None
-            _mm = _m[cond]
+        if flush:
+            dat = np.load('temp_dtfe_MPI_%i_%i.npz'%(MPI.rank, i), allow_pickle=True)
+            _xx, _yy, _zz, _ff, _mm = dat['_xx'], dat['_yy'], dat['_zz'], dat['_ff'], dat['_mm']
+            if calcdens:
+                _ff = None
+            else:
+                _mm = None
         else:
-            _ff = _f[cond]
-            _mm = None
+            cond = np.where((_x >= _xmin-buffer_length) &
+                            (_x < _xmax+buffer_length) &
+                            (_y >= _ymin-buffer_length) &
+                            (_y < _ymax+buffer_length) &
+                            (_z >= _zmin-buffer_length) &
+                            (_z < _zmax+buffer_length))[0]
+            _xx, _yy, _zz = _x[cond], _y[cond], _z[cond]
+            if calcdens:
+                _ff = None
+                _mm = _m[cond]
+            else:
+                _ff = _f[cond]
+                _mm = None
         _f3d = dtfe4grid.dtfe4grid3D(_xx, _yy, _zz, [_nxgrid, _nygrid, _nzgrid],
                                      [_xmax-_xmin, _ymax-_ymin, _zmax-_zmin],
                                      f=_ff, mass=_mm, origin=[_xmin, _ymin, _zmin],
@@ -340,6 +398,8 @@ def mpi_dtfe4grid3D(x, y, z, ngrid, boxsize, MPI, MPI_split, f=None, mass=None,
         f3D[xs1[i]:xs2[i],ys1[i]:ys2[i],zs1[i]:zs2[i]] = _f3d
         if verbose:
             MPI.mpi_print_zero(verbose_prefix+"DTFE subgrid:", "%i/%i" % (i+1,len(xs1)))
+    if flush:
+        subprocess.call('rm temp_dtfe_MPI_%i_*.npz' % MPI.rank, shell=True)
     if outputgrid:
         return x3D, y3D, z3D, f3D
     else:

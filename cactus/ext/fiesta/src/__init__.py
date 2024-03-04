@@ -43,12 +43,12 @@ from .matrix import eig2by2
 from .matrix import symeig3by3
 
 from .delaunay2d import delaunay_area_2d
-from .delaunay2d import sum_delaunay4points_2d
+from .delaunay2d import sum_delaunay_area_4_points_2d
 from .delaunay2d import get_delf0_2d
 from .delaunay2d import delaunay_estimate_2d
 
 from .delaunay3d import delaunay_volume_3d
-from .delaunay3d import sum_delaunay4points_3d
+from .delaunay3d import sum_delaunay_vol_4_points_3d
 from .delaunay3d import get_delf0_3d
 from .delaunay3d import delaunay_estimate_3d
 

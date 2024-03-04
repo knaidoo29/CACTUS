@@ -275,7 +275,7 @@ subroutine order_label_index(maxlabel, lenlabels, labels, start_index &
 end subroutine order_label_index
 
 
-subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel, group)
+subroutine hoshen_kopelman_2d(binmap, binlen, nxgrid, nygrid, periodx, periody, maxlabel, group)
 
   ! Hoshen-Kopelman algorithm in 2D.
   !
@@ -297,27 +297,27 @@ subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel
 
   implicit none
 
-  integer, intent(in) :: nxgrid, nygrid
-  integer, intent(in) :: binmap(nxgrid*nygrid)
+  integer, intent(in) :: nxgrid, nygrid, binlen
+  integer, intent(in) :: binmap(binlen)
   logical, intent(in) :: periodx, periody
-  integer, intent(out) :: maxlabel, group(nxgrid*nygrid)
+  integer, intent(out) :: maxlabel, group(binlen)
 
   integer :: i, j, ix, iy, jx, jy, xpix_id, ypix_id
-  integer :: newmaxlabel, labels(nxgrid*nygrid)
+  integer :: newmaxlabel, labels(binlen)
   integer :: xpix_plus_id, ypix_plus_id
   integer :: i_px, i_py
   integer :: ind1out, ind2out, indout
-  integer :: labelsout1(nxgrid*nygrid)
+  integer :: labelsout1(binlen)
 
   maxlabel = 0
 
-  do i = 1, nxgrid*nygrid
+  do i = 1, binlen
     group(i) = 0
     labels(i) = 0
     labelsout1(i) = 0
   end do
 
-  do i = 1, nxgrid*nygrid
+  do i = 1, binlen
     if (binmap(i) .eq. 1) then
 
       if (group(i) .eq. 0) then
@@ -360,7 +360,7 @@ subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel
           if (group(i_px) .eq. 0) then
             group(i_px) = group(i)
           else if (group(i_px) .ne. group(i)) then
-            call unionise(group(i), group(i_px), nxgrid*nygrid, labels, ind1out, ind2out, indout)
+            call unionise(group(i), group(i_px), binlen, labels, ind1out, ind2out, indout)
             labels(ind1out) = indout
             labels(ind2out) = indout
             labels(group(i)) = indout
@@ -380,7 +380,7 @@ subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel
           if (group(i_py) .eq. 0) then
             group(i_py) = group(i)
           else if (group(i_py) .ne. group(i)) then
-            call unionise(group(i), group(i_py), nxgrid*nygrid, labels, ind1out, ind2out, indout)
+            call unionise(group(i), group(i_py), binlen, labels, ind1out, ind2out, indout)
             labels(ind1out) = indout
             labels(ind2out) = indout
             labels(group(i)) = indout
@@ -394,10 +394,10 @@ subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel
     end if
   end do
 
-  call cascade_all(maxlabel, nxgrid*nygrid, labels, labelsout1)
-  call shuffle_down(maxlabel, nxgrid*nygrid, labelsout1, newmaxlabel, labels)
+  call cascade_all(maxlabel, binlen, labels, labelsout1)
+  call shuffle_down(maxlabel, binlen, labelsout1, newmaxlabel, labels)
 
-  do i = 1, nxgrid*nygrid
+  do i = 1, binlen
     if (group(i) .ne. 0) then
       group(i) = labels(group(i))
     end if
@@ -408,7 +408,7 @@ subroutine hoshen_kopelman_2d(binmap, nxgrid, nygrid, periodx, periody, maxlabel
 end subroutine hoshen_kopelman_2d
 
 
-subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
+subroutine hoshen_kopelman_3d(binmap, binlen, nxgrid, nygrid, nzgrid, periodx, periody &
   , periodz, maxlabel, group)
 
   ! Hoshen-Kopelman algorithm in 3D.
@@ -431,27 +431,27 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
 
   implicit none
 
-  integer, intent(in) :: nxgrid, nygrid, nzgrid
-  integer, intent(in) :: binmap(nxgrid*nygrid*nzgrid)
+  integer, intent(in) :: nxgrid, nygrid, nzgrid, binlen
+  integer, intent(in) :: binmap(binlen)
   logical, intent(in) :: periodx, periody, periodz
-  integer, intent(out) :: maxlabel, group(nxgrid*nygrid*nzgrid)
+  integer, intent(out) :: maxlabel, group(binlen)
 
   integer :: i, j, ix, iy, iz, jx, jy, jz, xpix_id, ypix_id, zpix_id
-  integer :: newmaxlabel, labels(nxgrid*nygrid*nzgrid)
+  integer :: newmaxlabel, labels(binlen)
   integer :: xpix_plus_id, ypix_plus_id, zpix_plus_id
   integer :: i_px, i_py, i_pz
   integer :: ind1out, ind2out, indout
-  integer :: labelsout1(nxgrid*nygrid*nzgrid)
+  integer :: labelsout1(binlen)
 
   maxlabel = 0
 
-  do i = 1, nxgrid*nygrid*nzgrid
+  do i = 1, binlen
     group(i) = 0
     labels(i) = 0
     labelsout1(i) = 0
   end do
 
-  do i = 1, nxgrid*nygrid*nzgrid
+  do i = 1, binlen
     if (binmap(i) .eq. 1) then
 
       if (group(i) .eq. 0) then
@@ -506,7 +506,7 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
           if (group(i_px) .eq. 0) then
             group(i_px) = group(i)
           else if (group(i_px) .ne. group(i)) then
-            call unionise(group(i), group(i_px), nxgrid*nygrid*nzgrid, labels, ind1out, ind2out, indout)
+            call unionise(group(i), group(i_px), binlen, labels, ind1out, ind2out, indout)
             labels(ind1out) = indout
             labels(ind2out) = indout
             labels(group(i)) = indout
@@ -527,7 +527,7 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
           if (group(i_py) .eq. 0) then
             group(i_py) = group(i)
           else if (group(i_py) .ne. group(i)) then
-            call unionise(group(i), group(i_py), nxgrid*nygrid*nzgrid, labels, ind1out, ind2out, indout)
+            call unionise(group(i), group(i_py), binlen, labels, ind1out, ind2out, indout)
             labels(ind1out) = indout
             labels(ind2out) = indout
             labels(group(i)) = indout
@@ -548,7 +548,7 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
           if (group(i_pz) .eq. 0) then
             group(i_pz) = group(i)
           else if (group(i_pz) .ne. group(i)) then
-            call unionise(group(i), group(i_pz), nxgrid*nygrid*nzgrid, labels, ind1out, ind2out, indout)
+            call unionise(group(i), group(i_pz), binlen, labels, ind1out, ind2out, indout)
             labels(ind1out) = indout
             labels(ind2out) = indout
             labels(group(i)) = indout
@@ -561,10 +561,10 @@ subroutine hoshen_kopelman_3d(binmap, nxgrid, nygrid, nzgrid, periodx, periody &
     end if
   end do
 
-  call cascade_all(maxlabel, nxgrid*nygrid*nzgrid, labels, labelsout1)
-  call shuffle_down(maxlabel, nxgrid*nygrid*nzgrid, labelsout1, newmaxlabel, labels)
+  call cascade_all(maxlabel, binlen, labels, labelsout1)
+  call shuffle_down(maxlabel, binlen, labelsout1, newmaxlabel, labels)
 
-  do i = 1, nxgrid*nygrid*nzgrid
+  do i = 1, binlen
     if (group(i) .ne. 0) then
       group(i) = labels(group(i))
     end if

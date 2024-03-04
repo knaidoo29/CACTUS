@@ -5,7 +5,7 @@
 |               |                                       |
 |---------------|---------------------------------------|
 | Author        | Krishna Naidoo                        |               
-| Version       | 0.0.2                                 |
+| Version       | 0.3.0                                 |
 | Repository    | https://github.com/knaidoo29/cactus   |
 | Documentation | https://cactus-doc.readthedocs.io/    |
 
@@ -13,27 +13,46 @@
 
 ## Introduction
 
-The **Cosmic web Classification Toolkit (CaCTus)** is an open source python package for classifying cosmic web environments from simulations. The package will allow users to reliably classify cosmic web structures and to compare different techniques. For the time being we implement the following Hessian based approaches:
+The **Cosmic web Classification Toolkit (CaCTus)** is an open source python package for classifying cosmic web environments from simulations. The package allows a user to reliably classify cosmic web structures and to compare different techniques. For the time being we implement the following Hessian based approaches:
 
-* T-Web [to do]
-* V-Web [to do]
-* Nexus+ [to do]
+* T-Web
+* V-Web
+* Multiscale Morphology Filter (MMF):
+  * NEXUS+
+  * NEXUS_den
+  * NEXUS_tidal
+  * NEXUS_denlog
+  * NEXUS_veldiv
+  * NEXUS_velshear
 
-Inputs can either directly take the simulation particles themselves or use a pre-calculated density (or velocity) field. Note, this implements field estimation techniques from another package called [FIESTA](https://github.com/knaidoo29/FIESTA).
+As well as routines for computing density and velocity fields from a given catalogue:
+
+* Particle mesh assignments:
+  * Nearest grid point (NGP)
+  * Cloud in cell (CIC)
+  * Triangular shaped cloud (TSC)
+* Smooth particle hydrodynamics (SPH)
+* Delaunay tesselation field estimation (DTFE)
 
 ## Dependencies
 
+* `Python`
+* `Fortran`
+* `OpenMPI`.
+
+Python modules:
+
 * [numpy](http://www.numpy.org/)
 * [scipy](https://scipy.org/)
-* [matplotlib](https://matplotlib.org/)
 * [mpi4py](https://mpi4py.readthedocs.io/en/stable/)
-* [mpi4py-fft](https://mpi4py-fft.readthedocs.io/en/latest/)
-* [FIESTA](https://github.com/knaidoo29/FIESTA) (install developer branch)
-* [MAGPIE](https://github.com/knaidoo29/MAGPIE) (install developer branch)
-* [MPIutils](https://github.com/knaidoo29/MPIutils)
-* [SHIFT](https://github.com/knaidoo29/SHIFT)
 
 ## Installation
+
+Cloning the repository and running in the `cactus` repository:
+```
+python setup.py build
+python setup.py install
+```
 
 ## Citing
 
@@ -45,4 +64,22 @@ don't have a github account) email _krishna.naidoo.11@ucl.ac.uk_.
 
 ## Version History
 
-* **Version 0.0**:
+* **Version 1**:
+  * Density computation:
+    * Particle mesh assignments: NGP, CIC and TSC.
+    * SPH [todo]
+    * DTFE
+  * Velocity computation:
+    * Particle mesh assignments: NGP, CIC and TSC. [todo]
+    * SPH [todo]
+    * DTFE [todo]
+  * Hessian based approaches:
+    * T-web
+    * V-web [todo]
+    * MMF:
+      * NEXUS+
+      * NEXUS_den
+      * NEXUS_tidal [todo]
+      * NEXUS_denlog [todo]
+      * NEXUS_veldiv [todo]
+      * NEXUS_velshear [todo]

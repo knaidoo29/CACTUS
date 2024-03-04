@@ -68,6 +68,53 @@ def buffer_random_2D(npart, boxsize, buffer_length, origin=0.):
     return x, y
 
 
+def subbox_buffer_random_2D(npart, boxsize, buffer_length, subboxsize, origin=0.,
+    subbox_origin=0.):
+    """Generates random buffer particles around a 2D box.
+
+    Parameters
+    ----------
+    npart : int
+        Number of particles in the 2D box.
+    boxsize : float
+        Box size.
+    buffer_length : float
+        Length of the buffer region.
+    subboxsize : float
+        Size of subbox.
+    origin : float, optional
+        Origin point.
+    subbox_origin : float, optional
+        Origin point for the subbox.
+
+    Returns
+    -------
+    datap : array
+        Periodic data values.
+    """
+    if np.isscalar(origin):
+        xorigin, yorigin = origin, origin
+    else:
+        xorigin, yorigin = origin[0], origin[1]
+    if np.isscalar(boxsize):
+        xboxsize, yboxsize = boxsize, boxsize
+    else:
+        xboxsize, yboxsize = boxsize[0], boxsize[1]
+    if np.isscalar(subbox_origin):
+        subbox_xorigin, subbox_yorigin = subbox_origin, subbox_origin
+    else:
+        subbox_xorigin, subbox_yorigin = subbox_origin[0], subbox_origin[1]
+    if np.isscalar(subboxsize):
+        xsubboxsize, ysubboxsize = subboxsize, subboxsize
+    else:
+        xsubboxsize, ysubboxsize = subboxsize[0], subboxsize[1]
+    x, y = buffer_random_2D(npart, boxsize, buffer_length, origin=origin)
+    cond = np.where((x >= subbox_xorigin-buffer_length) & (x <= subbox_xorigin+buffer_length) &
+        (y >= subbox_yorigin-buffer_length) & (y <= subbox_yorigin+buffer_length))[0]
+    x, y = x[cond], y[cond]
+    return x, y
+
+
 def buffer_random_3D(npart, boxsize, buffer_length, origin=0.):
     """Generates random buffer particles around a 3D box.
 
@@ -149,4 +196,56 @@ def buffer_random_3D(npart, boxsize, buffer_length, origin=0.):
     x = np.concatenate([x1, x21, x22, x23, x24, x3])
     y = np.concatenate([y1, y21, y22, y23, y24, y3])
     z = np.concatenate([z1, z21, z22, z23, z24, z3])
+    return x, y, z
+
+
+def subbox_buffer_random_3D(npart, boxsize, buffer_length, subboxsize, origin=0.,
+    subbox_origin=0.):
+    """Generates random buffer particles around a 2D box.
+
+    Parameters
+    ----------
+    npart : int
+        Number of particles in the 2D box.
+    boxsize : float
+        Box size.
+    buffer_length : float
+        Length of the buffer region.
+    subboxsize : float
+        Size of subbox.
+    origin : float, optional
+        Origin point.
+    subbox_origin : float, optional
+        Origin point for the subbox.
+
+    Returns
+    -------
+    datap : array
+        Periodic data values.
+    """
+    if np.isscalar(origin):
+        xorigin, yorigin, zorigin = origin, origin, origin
+    else:
+        xorigin, yorigin, zorigin = origin[0], origin[1], origin[2]
+    if np.isscalar(boxsize):
+        xboxsize, yboxsize, zboxsize = boxsize, boxsize, boxsize
+    else:
+        xboxsize, yboxsize, zboxsize = boxsize[0], boxsize[1], boxsize[2]
+    if np.isscalar(subbox_origin):
+        subbox_xorigin, subbox_yorigin, subbox_zorigin = \
+            subbox_origin, subbox_origin, subbox_origin
+    else:
+        subbox_xorigin, subbox_yorigin, subbox_zorigin = \
+            subbox_origin[0], subbox_origin[1], subbox_origin[2]
+    if np.isscalar(subboxsize):
+        xsubboxsize, ysubboxsize, zsubboxsize = \
+            subboxsize, subboxsize, subboxsize
+    else:
+        xsubboxsize, ysubboxsize, zsubboxsize = \
+            subboxsize[0], subboxsize[1], subboxsize[2]
+    x, y, y = buffer_random_3D(npart, boxsize, buffer_length, origin=origin)
+    cond = np.where((x >= subbox_xorigin-buffer_length) & (x <= subbox_xorigin+buffer_length) &
+        (y >= subbox_yorigin-buffer_length) & (y <= subbox_yorigin+buffer_length) &
+        (z >= subbox_zorigin-buffer_length) & (z <= subbox_zorigin+buffer_length))[0]
+    x, y, z = x[cond], y[cond], z[cond]
     return x, y, z
