@@ -217,7 +217,7 @@ def mpi_get_cweb_group_info(whichweb, cweb, dens, Omega_m, boxsize, MPI,
         Average density of each group.
     """
     ngrid = len(cweb)
-
+    
     mass = density.mpi_dens2mass(dens, Omega_m, boxsize, ngrid, MPI)
 
     dV = (boxsize/ngrid)**3.

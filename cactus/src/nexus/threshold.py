@@ -445,10 +445,10 @@ def get_clust_threshold(Sc_lims, Num_mlim, Num_mlim_dlim):
     return Sc_lim
 
 
-def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
-    minmass, periodic=True):
+def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, minmass,
+    periodic=True):
     """Apply the cluster significance threshold to find cluster environments.
-    Only environment groups larger than the minvol, minmass and mindens are kept.
+    Only environment groups larger than the minvol and minmass are kept.
 
     Parameters
     ----------
@@ -500,7 +500,8 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
     # in units of mean density
     group_dens /= avgdens
 
-    cond = np.where((group_N >= minpix) & (group_mass > minmass) & (group_dens > mindens))[0]
+    #Edit
+    cond = np.where((group_N >= minpix) & (group_mass > minmass))[0]
 
     mask = np.zeros(len(group_N)+1)
     mask[cond+1] = 1.
@@ -510,10 +511,10 @@ def get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
     return clust_map
 
 
-def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens,
-    minmass, MPI, periodic=True):
+def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, minmass,
+    MPI, periodic=True):
     """Apply the cluster significance threshold to find cluster environments.
-    Only environment groups larger than the minvol, minmass and mindens are kept.
+    Only environment groups larger than the minvol and minmass are kept.
 
     Parameters
     ----------
@@ -531,8 +532,6 @@ def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens
         Grid size along each axis.
     minvol : float
         Minimum volume for a group.
-    mindens : float
-        Minimum density for a group.
     minmass : float
         Minimum mass for a group.
     MPI : object
@@ -570,7 +569,7 @@ def mpi_get_clust_map(Sc, Sc_lim, dens, Omega_m, boxsize, ngrid, minvol, mindens
     # in units of mean density
     group_dens /= avgdens
 
-    cond = np.where((group_N >= minpix) & (group_mass > minmass) & (group_dens > mindens))[0]
+    cond = np.where((group_N >= minpix) & (group_mass > minmass))[0]
 
     mask = np.zeros(len(group_N)+1)
     mask[cond+1] = 1.

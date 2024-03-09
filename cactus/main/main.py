@@ -1139,7 +1139,6 @@ class CaCTus:
         clust_map = src.nexus.mpi_get_clust_map(Sc, Sc_lim, self.density["dens"],
             self.cosmo["Omega_m"], self.siminfo["Boxsize"], self.siminfo["Ngrid"],
             self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minvol"],
-            self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Mindens"],
             self.cosmicweb["Nexus"]["Thresholds"]["Clusters"]["Minmass"], self.MPI,
             periodic=self.siminfo["Periodic"])
 
@@ -1186,7 +1185,7 @@ class CaCTus:
         self.MPI.mpi_print_zero(" ### ==========================")
 
         self.cosmicweb["web_flag"] = src.nexus.get_cweb_map(clust_map, filam_map, sheet_map)
-        
+
         self.MPI.mpi_print_zero()
         fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
         self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to "+fname)
