@@ -746,7 +746,18 @@ def get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
     M = interp_sumM(logSf_lim)
 
     dM2 = abs(fiesta.maths.dfdx(logSf_lim, M**2.))
-    Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+
+    logSf_range = logSf_lim[-1] - logSf_lim[0]
+    logSf_range += logSf_lim[1] - logSf_lim[0]
+    sigma = 0.1
+
+    dM2k = shift.cart.dct1D(dM2, logSf_range)
+    k = shift.cart.kgrid1D(logSf_range, len(dM2))
+    dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    dM2_gaussian = shift.cart.idct1D(dM2k, logSf_range)
+
+    #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+    Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
 
     return Sf_lim, logSf_lim, dM2
 
@@ -927,7 +938,18 @@ def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map
     M = interp_sumM(logSf_lim)
 
     dM2 = abs(fiesta.maths.dfdx(logSf_lim, M**2.))
-    Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+
+    logSf_range = logSf_lim[-1] - logSf_lim[0]
+    logSf_range += logSf_lim[1] - logSf_lim[0]
+    sigma = 0.1
+
+    dM2k = shift.cart.dct1D(dM2, logSf_range)
+    k = shift.cart.kgrid1D(logSf_range, len(dM2))
+    dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    dM2_gaussian = shift.cart.idct1D(dM2k, logSf_range)
+
+    #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+    Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
 
     return Sf_lim, logSf_lim, dM2
 
@@ -1207,7 +1229,18 @@ def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
     M = interp_sumM(logSw_lim)
 
     dM2 = abs(fiesta.maths.dfdx(logSw_lim, M**2.))
-    Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
+
+    logSw_range = logSw_lim[-1] - logSw_lim[0]
+    logSw_range += logSw_lim[1] - logSw_lim[0]
+    sigma = 0.1
+
+    dM2k = shift.cart.dct1D(dM2, logSw_range)
+    k = shift.cart.kgrid1D(logSw_range, len(dM2))
+    dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    dM2_gaussian = shift.cart.idct1D(dM2k, logSw_range)
+
+    #Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
+    Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
 
     return Sw_lim, logSw_lim, dM2
 
@@ -1392,8 +1425,19 @@ def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map
     M = interp_sumM(logSw_lim)
 
     dM2 = abs(fiesta.maths.dfdx(logSw_lim, M**2.))
-    Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
 
+    logSw_range = logSw_lim[-1] - logSw_lim[0]
+    logSw_range += logSw_lim[1] - logSw_lim[0]
+    sigma = 0.1
+
+    dM2k = shift.cart.dct1D(dM2, logSw_range)
+    k = shift.cart.kgrid1D(logSw_range, len(dM2))
+    dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    dM2_gaussian = shift.cart.idct1D(dM2k, logSw_range)
+
+    Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
+    Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
+    
     return Sw_lim, logSw_lim, dM2
 
 
