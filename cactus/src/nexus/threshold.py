@@ -759,7 +759,7 @@ def get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
     #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
     Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
 
-    return Sf_lim, logSf_lim, dM2
+    return Sf_lim, logSf_lim, dM2, Sf_lims, sumM
 
 
 def mpi_get_Sf_group_info(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
@@ -951,7 +951,7 @@ def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map
     #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
     Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
 
-    return Sf_lim, logSf_lim, dM2
+    return Sf_lim, logSf_lim, dM2, Sf_lims, sumM
 
 
 def get_filam_map(Sf, Sf_lim, dens, boxsize, ngrid, minvol, clust_map, periodic=True):
@@ -1242,7 +1242,7 @@ def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
     #Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
     Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
 
-    return Sw_lim, logSw_lim, dM2
+    return Sw_lim, logSw_lim, dM2, Sw_lims, sumM
 
 
 def mpi_get_Sw_group_info(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
@@ -1437,8 +1437,8 @@ def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map
 
     Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
     Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
-    
-    return Sw_lim, logSw_lim, dM2
+
+    return Sw_lim, logSw_lim, dM2, Sf_lims, sumM
 
 
 def get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map,
