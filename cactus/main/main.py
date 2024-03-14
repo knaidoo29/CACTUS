@@ -1189,7 +1189,7 @@ class CaCTus:
         if self.MPI.rank == 0:
             fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "wall_threshold.npz"
             self.MPI.mpi_print_zero(" ---> Saving Wall threshold optimisation to " + fname)
-            np.savez(fname, logSw_lim=logSw_lim, dM2=dM2, Sw_lim=Sw_lim, Sw_lims=Sw_lim, sumM=sumM)
+            np.savez(fname, logSw_lim=logSw_lim, dM2=dM2, Sw_lim=Sw_lim, Sw_lims=Sw_lims, sumM=sumM)
 
         sheet_map = src.nexus.mpi_get_sheet_map(Sw, Sw_lim, self.density["dens"],
             self.siminfo["Boxsize"], self.siminfo["Ngrid"],

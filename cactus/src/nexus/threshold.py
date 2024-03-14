@@ -747,17 +747,25 @@ def get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
 
     dM2 = abs(fiesta.maths.dfdx(logSf_lim, M**2.))
 
-    logSf_range = logSf_lim[-1] - logSf_lim[0]
-    logSf_range += logSf_lim[1] - logSf_lim[0]
-    sigma = 0.1
+    # logSf_range = logSf_lim[-1] - logSf_lim[0]
+    # logSf_range += logSf_lim[1] - logSf_lim[0]
+    # sigma = 0.1
+    #
+    # dM2k = shift.cart.dct1D(dM2, logSf_range)
+    # k = shift.cart.kgrid1D(logSf_range, len(dM2))
+    # dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    # dM2_gaussian = shift.cart.idct1D(dM2k, logSf_range)
+    #
+    # #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+    # Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
 
-    dM2k = shift.cart.dct1D(dM2, logSf_range)
-    k = shift.cart.kgrid1D(logSf_range, len(dM2))
-    dM2k *= shift.cart.convolve_gaussian(k, sigma)
-    dM2_gaussian = shift.cart.idct1D(dM2k, logSf_range)
-
-    #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
-    Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
+    dM2_err = np.std(dM2[1:]-dM2[:-1])*np.ones(len(logSf_lim))
+    cond = np.where(dM2 >= np.max(dM2)*0.5)[0]
+    z = np.polyfit(logSf_lim[cond], dM2[cond], 6, w=1./dM2_err[cond])
+    p = np.poly1d(z)
+    _x = np.linspace(logSf_lim[cond].min(), logSf_lim[cond].max(), 100)
+    _y = p(_x)
+    Sf_lim = 10.**_x[np.argmax(_y)]
 
     return Sf_lim, logSf_lim, dM2, Sf_lims, sumM
 
@@ -939,17 +947,25 @@ def mpi_get_filam_threshold(Sf, dens, Omega_m, boxsize, ngrid, minvol, clust_map
 
     dM2 = abs(fiesta.maths.dfdx(logSf_lim, M**2.))
 
-    logSf_range = logSf_lim[-1] - logSf_lim[0]
-    logSf_range += logSf_lim[1] - logSf_lim[0]
-    sigma = 0.1
+    # logSf_range = logSf_lim[-1] - logSf_lim[0]
+    # logSf_range += logSf_lim[1] - logSf_lim[0]
+    # sigma = 0.1
+    #
+    # dM2k = shift.cart.dct1D(dM2, logSf_range)
+    # k = shift.cart.kgrid1D(logSf_range, len(dM2))
+    # dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    # dM2_gaussian = shift.cart.idct1D(dM2k, logSf_range)
+    #
+    # #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
+    # Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
 
-    dM2k = shift.cart.dct1D(dM2, logSf_range)
-    k = shift.cart.kgrid1D(logSf_range, len(dM2))
-    dM2k *= shift.cart.convolve_gaussian(k, sigma)
-    dM2_gaussian = shift.cart.idct1D(dM2k, logSf_range)
-
-    #Sf_lim = 10.**logSf_lim[np.argmax(dM2)]
-    Sf_lim = 10.**logSf_lim[np.argmax(dM2_gaussian)]
+    dM2_err = np.std(dM2[1:]-dM2[:-1])*np.ones(len(logSf_lim))
+    cond = np.where(dM2 >= np.max(dM2)*0.5)[0]
+    z = np.polyfit(logSf_lim[cond], dM2[cond], 6, w=1./dM2_err[cond])
+    p = np.poly1d(z)
+    _x = np.linspace(logSf_lim[cond].min(), logSf_lim[cond].max(), 100)
+    _y = p(_x)
+    Sf_lim = 10.**_x[np.argmax(_y)]
 
     return Sf_lim, logSf_lim, dM2, Sf_lims, sumM
 
@@ -1230,17 +1246,25 @@ def get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map,
 
     dM2 = abs(fiesta.maths.dfdx(logSw_lim, M**2.))
 
-    logSw_range = logSw_lim[-1] - logSw_lim[0]
-    logSw_range += logSw_lim[1] - logSw_lim[0]
-    sigma = 0.1
-
-    dM2k = shift.cart.dct1D(dM2, logSw_range)
-    k = shift.cart.kgrid1D(logSw_range, len(dM2))
-    dM2k *= shift.cart.convolve_gaussian(k, sigma)
-    dM2_gaussian = shift.cart.idct1D(dM2k, logSw_range)
+    # logSw_range = logSw_lim[-1] - logSw_lim[0]
+    # logSw_range += logSw_lim[1] - logSw_lim[0]
+    # sigma = 0.1
+    #
+    # dM2k = shift.cart.dct1D(dM2, logSw_range)
+    # k = shift.cart.kgrid1D(logSw_range, len(dM2))
+    # dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    # dM2_gaussian = shift.cart.idct1D(dM2k, logSw_range)
 
     #Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
-    Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
+    #Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
+
+    dM2_err = np.std(dM2[1:]-dM2[:-1])*np.ones(len(logSw_lim))
+    cond = np.where(dM2 >= np.max(dM2)*0.5)[0]
+    z = np.polyfit(logSw_lim[cond], dM2[cond], 6, w=1./dM2_err[cond])
+    p = np.poly1d(z)
+    _x = np.linspace(logSw_lim[cond].min(), logSw_lim[cond].max(), 100)
+    _y = p(_x)
+    Sw_lim = 10.**_x[np.argmax(_y)]
 
     return Sw_lim, logSw_lim, dM2, Sw_lims, sumM
 
@@ -1426,19 +1450,27 @@ def mpi_get_sheet_threshold(Sw, dens, Omega_m, boxsize, ngrid, minvol, clust_map
 
     dM2 = abs(fiesta.maths.dfdx(logSw_lim, M**2.))
 
-    logSw_range = logSw_lim[-1] - logSw_lim[0]
-    logSw_range += logSw_lim[1] - logSw_lim[0]
-    sigma = 0.1
+    # logSw_range = logSw_lim[-1] - logSw_lim[0]
+    # logSw_range += logSw_lim[1] - logSw_lim[0]
+    # sigma = 0.1
+    #
+    # dM2k = shift.cart.dct1D(dM2, logSw_range)
+    # k = shift.cart.kgrid1D(logSw_range, len(dM2))
+    # dM2k *= shift.cart.convolve_gaussian(k, sigma)
+    # dM2_gaussian = shift.cart.idct1D(dM2k, logSw_range)
+    #
+    # Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
+    # Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
 
-    dM2k = shift.cart.dct1D(dM2, logSw_range)
-    k = shift.cart.kgrid1D(logSw_range, len(dM2))
-    dM2k *= shift.cart.convolve_gaussian(k, sigma)
-    dM2_gaussian = shift.cart.idct1D(dM2k, logSw_range)
+    dM2_err = np.std(dM2[1:]-dM2[:-1])*np.ones(len(logSw_lim))
+    cond = np.where(dM2 >= np.max(dM2)*0.5)[0]
+    z = np.polyfit(logSw_lim[cond], dM2[cond], 6, w=1./dM2_err[cond])
+    p = np.poly1d(z)
+    _x = np.linspace(logSw_lim[cond].min(), logSw_lim[cond].max(), 100)
+    _y = p(_x)
+    Sw_lim = 10.**_x[np.argmax(_y)]
 
-    Sw_lim = 10.**logSw_lim[np.argmax(dM2)]
-    Sw_lim = 10.**logSw_lim[np.argmax(dM2_gaussian)]
-
-    return Sw_lim, logSw_lim, dM2, Sf_lims, sumM
+    return Sw_lim, logSw_lim, dM2, Sw_lims, sumM
 
 
 def get_sheet_map(Sw, Sw_lim, dens, boxsize, ngrid, minvol, clust_map,
