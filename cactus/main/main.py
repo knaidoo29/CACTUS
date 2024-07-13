@@ -2,17 +2,11 @@ import os
 import time
 
 import numpy as np
-
 from scipy.interpolate import interp1d
 
-from ..ext import fiesta, magpie, shift
-
-from . import files
-from . import read
-from . import inout
 from .. import src
-
-
+from ..ext import fiesta, magpie, shift
+from . import files, inout, read
 """
 The CaCTus 'graphics' are inspired/based on the ascii artwork:
 
@@ -554,6 +548,21 @@ class CaCTus:
                     self.MPI.mpi_print_zero()
                     self.MPI.mpi_print_zero(" -- Output\t\t=", self.cosmicweb["Nexus"]["Thresholds"]["Output"])
 
+    ####################################################################
+    # Read OutputSettings info
+        if self._check_param_key(params, "OutputSettings"):
+            self.MPI.mpi_print_zero()
+            self.MPI.mpi_print_zero(" OutputSettings:")
+
+            for key in self.output_settings["OutputSettings"].keys():
+                if self._check_param_key(params["OutputSettings"], key):
+                    self.output_settings["OutputSettings"][key] = params[
+                        "OutputSettings"][key]
+
+            self.MPI.mpi_print_zero()
+            for key in self.output_settings["OutputSettings"].keys():
+                self.MPI.mpi_print_zero(" - {}\t=".format(key),
+                                        self.output_settings[key])
 
     def _bool2yesno(self, _x):
         if _x is True:
@@ -1015,12 +1024,23 @@ class CaCTus:
     def _save_cweb(self):
         """Save cosmic web environments."""
         if self.cosmicweb["Type"] == "Nexus":
-            fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"]+str(self.MPI.rank)+".npz"
-            np.savez(fname, web_flag=self.cosmicweb["web_flag"])
+            prefix = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + str(
+                self.MPI.rank)
         elif self.cosmicweb["Type"] == "Tweb":
-            fname = self.cosmicweb["Tweb"]["Output"]+str(self.MPI.rank)+ ".npz"
-            np.savez(fname, web_flag=self.cosmicweb["web_flag"])
+            prefix = self.cosmicweb["Tweb"]["Output"] + str(self.MPI.rank)
+        else:
+            prefix = "Unspecified_segmentation_"
 
+        output_class = inout.OutputCosmicWeb(
+            prefix,
+            rank=str(self.MPI.rank),
+            output_data=self.cosmicweb["web_flag"])
+        if self.output_settings["NPZ"]:
+            output_class.save_npz()
+        if self.output_settings["HDF5"]:
+            output_class.save_hdf5()
+        if self.output_settings["CautunNEXUS"]:
+            output_class.save_cautun_nexus()
 
     def _run_nexus_signature(self):
         """Compute Nexus signature."""
@@ -1203,8 +1223,10 @@ class CaCTus:
         self.cosmicweb["web_flag"] = src.nexus.get_cweb_map(clust_map, filam_map, sheet_map)
 
         self.MPI.mpi_print_zero()
-        fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
-        self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to "+fname)
+        fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}" % (
+            self.MPI.size - 1)
+        self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to " +
+                                fname)
 
         self._save_cweb()
 
