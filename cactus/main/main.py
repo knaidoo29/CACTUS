@@ -1223,8 +1223,8 @@ class CaCTus:
         self.cosmicweb["web_flag"] = src.nexus.get_cweb_map(clust_map, filam_map, sheet_map)
 
         self.MPI.mpi_print_zero()
-        fname = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + "{0-%i}" % (
-            self.MPI.size - 1)
+        fname = self.cosmicweb["Nexus"]["Thresholds"][
+            "Output"] + "{0-%i}.npz" % (self.MPI.size - 1)
         self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to " +
                                 fname)
 
