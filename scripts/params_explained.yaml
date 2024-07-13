@@ -174,8 +174,13 @@ CosmicWeb:
 # Output settings
 OutputSettings:
   # Write outputs in numpy binary format
-  NPZ: True
+  NPZ:
+    WriteFile: True
   # Write outputs in HDF5 format
-  HDF5: None
+  HDF5:
+    WriteFile: None
   # Write outputs in binary format preceded by a 1048 byte header
-  CatunNEXUS: None
+  CatunNEXUS:
+    WriteFile: None
+    HeaderBytes: 1048
+    ArrayOrder: C

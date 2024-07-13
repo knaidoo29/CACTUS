@@ -186,9 +186,17 @@ class CaCTus:
         }
         # File output settings
         self.output_settings = {
-            "NPZ": True,
-            "HDF5": False,
-            "CautunNEXUS": False
+            "NPZ": {
+                "WriteFile": True
+            },
+            "HDF5": {
+                "WriteFile": False
+            },
+            "CautunNEXUS": {
+                "WriteFile": False,
+                "HeaderBytes": 1048,
+                "ArrayOrder": "C"
+            }
         }
 
     def start(self):
@@ -561,8 +569,8 @@ class CaCTus:
 
             for key in self.output_settings["OutputSettings"].keys():
                 if self._check_param_key(params["OutputSettings"], key):
-                    self.output_settings["OutputSettings"][key] = params[
-                        "OutputSettings"][key]
+                    self.output_settings["OutputSettings"][key].update(
+                        params["OutputSettings"][key])
 
             self.MPI.mpi_print_zero()
             for key in self.output_settings["OutputSettings"].keys():
@@ -1040,12 +1048,15 @@ class CaCTus:
             prefix,
             rank=str(self.MPI.rank),
             output_data=self.cosmicweb["web_flag"])
-        if self.output_settings["NPZ"]:
+        if self.output_settings["NPZ"]["WriteFile"]:
             output_class.save_npz()
-        if self.output_settings["HDF5"]:
+        if self.output_settings["HDF5"]["WriteFile"]:
             output_class.save_hdf5()
-        if self.output_settings["CautunNEXUS"]:
-            output_class.save_cautun_nexus()
+        if self.output_settings["CautunNEXUS"]["WriteFile"]:
+            output_class.save_cautun_nexus(
+                header_bytes=self.output_settings["CautunNEXUS"]
+                ["HeaderBytes"],
+                array_order=self.output_settings["CautunNEXUS"]["ArrayOrder"])
 
     def _run_nexus_signature(self):
         """Compute Nexus signature."""
