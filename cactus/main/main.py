@@ -184,7 +184,12 @@ class CaCTus:
             },
             "web_flag": None,
         }
-
+        # File output settings
+        self.output_settings = {
+            "NPZ": True,
+            "HDF5": False,
+            "CautunNEXUS": False
+        }
 
     def start(self):
         """Starts the run and timers."""
