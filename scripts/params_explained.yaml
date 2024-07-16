@@ -7,7 +7,7 @@ Cosmology:
 
 # Define basic box, grid and boundary conditions.
 Siminfo:
-  # Size of the Box
+  # Size of the Box in Mpc.h^-1
   Boxsize: 75.
   # Grid partition
   Ngrid: 128
