@@ -91,6 +91,9 @@ class OutputCosmicWebTest(unittest.TestCase):
         return None
 
     def test_save_cautun_nexus_c_order(self):
+        """Check that OutputCosmicWeb saves Cautun-style, 'C'-ordered
+            NEXUS outputs correctly.
+        """
         expected_filename = self.prefix + str(self.rank) + ".MMF"
         array_order = 'C'
 
@@ -129,6 +132,9 @@ class OutputCosmicWebTest(unittest.TestCase):
         return None
 
     def test_save_cautun_nexus_fortran_order(self):
+        """Check that OutputCosmicWeb saves Cautun-style,
+            'F'ortran-ordered NEXUS outputs correctly.
+        """
         expected_filename = self.prefix + str(self.rank) + ".MMF"
         array_order = 'F'
 
