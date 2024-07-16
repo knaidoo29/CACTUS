@@ -1,8 +1,7 @@
 import numpy as np
 import yaml
-import pygadgetreader as pyg
 
-
+from ..ext import pygadgetreader as pyg
 from . import files
 
 

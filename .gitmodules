@@ -1,0 +1,3 @@
+[submodule "cactus/ext/pygadgetreader"]
+	path = cactus/ext/pygadgetreader
+	url = https://github.com/jveitchmichaelis/pygadgetreader.git
