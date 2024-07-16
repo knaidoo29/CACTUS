@@ -200,7 +200,8 @@ class OutputCosmicWeb(object):
         cautun_nexus_data = np.asarray(cautun_nexus_data, dtype=dtype)
 
         # Concatenate header array with output data
-        output_data = np.concatenate((header_array, cautun_nexus_data))
+        output_data = np.concatenate(
+            (header_array, cautun_nexus_data.reshape(-1)))
 
         # Switches row-column order of binary data. Has to be done
         # manually because numpy always writes in 'C'-order.
