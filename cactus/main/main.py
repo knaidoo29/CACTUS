@@ -7,6 +7,7 @@ from scipy.interpolate import interp1d
 from .. import src
 from ..ext import fiesta, magpie, shift
 from . import files, inout, read
+
 """
 The CaCTus 'graphics' are inspired/based on the ascii artwork:
 
@@ -564,18 +565,67 @@ class CaCTus:
     ####################################################################
     # Read OutputSettings info
         if self._check_param_key(params, "OutputSettings"):
+
             self.MPI.mpi_print_zero()
             self.MPI.mpi_print_zero(" OutputSettings:")
 
-            for key in self.output_settings["OutputSettings"].keys():
-                if self._check_param_key(params["OutputSettings"], key):
-                    self.output_settings["OutputSettings"][key].update(
-                        params["OutputSettings"][key])
+            if self._check_param_key(params["OutputSettings"], "NPZ"):
 
-            self.MPI.mpi_print_zero()
-            for key in self.output_settings["OutputSettings"].keys():
-                self.MPI.mpi_print_zero(" - {}\t=".format(key),
-                                        self.output_settings[key])
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" - NPZ")
+
+                if self._check_param_key(params["OutputSettings"]["NPZ"], "WriteFile"):
+
+                    if params["OutputSettings"]["NPZ"]["WriteFile"] is None:
+                        self.output_settings["NPZ"]["WriteFile"] = False
+                    else:
+                        self.output_settings["NPZ"]["WriteFile"] = params["OutputSettings"]["NPZ"]["WriteFile"]
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- WriteFile\t\t=", self._bool2yesno(self.output_settings["NPZ"]["WriteFile"]))
+
+            if self._check_param_key(params["OutputSettings"], "HDF5"):
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" - HDF5")
+
+                if self._check_param_key(params["OutputSettings"]["HDF5"], "WriteFile"):
+
+                    if params["OutputSettings"]["HDF5"]["WriteFile"] is None:
+                        self.output_settings["HDF5"]["WriteFile"] = False
+                    else:
+                        self.output_settings["HDF5"]["WriteFile"] = params["OutputSettings"]["HDF5"]["WriteFile"]
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- WriteFile\t\t=", self._bool2yesno(self.output_settings["HDF5"]["WriteFile"]))
+
+            if self._check_param_key(params["OutputSettings"], "CautunNEXUS"):
+
+                self.MPI.mpi_print_zero()
+                self.MPI.mpi_print_zero(" - CautunNEXUS")
+
+                if self._check_param_key(params["OutputSettings"]["CautunNEXUS"], "WriteFile"):
+
+                    if params["OutputSettings"]["CautunNEXUS"]["WriteFile"] is None:
+                        self.output_settings["CautunNEXUS"]["WriteFile"] = False
+                    else:
+                        self.output_settings["CautunNEXUS"]["WriteFile"] = params["OutputSettings"]["CautunNEXUS"]["WriteFile"]
+
+                    self.MPI.mpi_print_zero()
+                    self.MPI.mpi_print_zero(" -- WriteFile\t\t=", self._bool2yesno(self.output_settings["CautunNEXUS"]["WriteFile"]))
+
+                if self._check_param_key(params["OutputSettings"]["CautunNEXUS"], "HeaderBytes"):
+
+                    self.output_settings["CautunNEXUS"]["HeaderBytes"] = int(params["OutputSettings"]["CautunNEXUS"]["HeaderBytes"])
+
+                    self.MPI.mpi_print_zero(" -- HeaderBytes\t\t=", self.output_settings["CautunNEXUS"]["HeaderBytes"])
+
+                if self._check_param_key(params["OutputSettings"]["CautunNEXUS"], "ArrayOrder"):
+
+                    self.output_settings["CautunNEXUS"]["ArrayOrder"] = str(params["OutputSettings"]["CautunNEXUS"]["ArrayOrder"])
+
+                    self.MPI.mpi_print_zero(" -- ArrayOrder\t\t=", self.output_settings["CautunNEXUS"]["ArrayOrder"])
+
 
     def _bool2yesno(self, _x):
         if _x is True:
@@ -641,7 +691,7 @@ class CaCTus:
     def _particle_mass(self):
         """Compute particle mass."""
         Omega_m = self.cosmo["Omega_m"]
-        boxsize = self.siminfo["Boxsize"]#+2.*self.siminfo["Buffer_Length"]
+        boxsize = self.siminfo["Boxsize"]
         self._get_npart()
         npart = self.particles["npart"]
         self.particles["mass"] = src.density.average_mass_per_cell(Omega_m, boxsize, npart**(1./3.))
@@ -833,8 +883,7 @@ class CaCTus:
 
     def _save_dens(self):
         """Save density to file."""
-        inout.save_dens(self.density["Saveas"], self.MPI.rank, self.siminfo["x3D"],
-            self.siminfo["y3D"], self.siminfo["z3D"], self.density["dens"],
+        inout.save_dens(self.density["Saveas"], self.MPI.rank, self.density["dens"],
             self.siminfo["Ngrid"], self.siminfo["Boxsize"])
 
 
@@ -877,6 +926,20 @@ class CaCTus:
         self.MPI.wait()
 
 
+    def _create_pos4files(self, boxsize, ngrid, rank, size):
+        """Constructs 3D coordinates for grid constructed in parallel with arbitrary
+        number of cores, not necessarily the number being used currently."""
+        xedges = np.linspace(0., boxsize, ngrid + 1)
+        x = 0.5*(xedges[1:] + xedges[:-1])
+        split1, split2 = self.MPI.split(len(x), size=size)
+        x = x[split1[rank]:split2[rank]]
+        xedges = xedges[split1[rank]:split2[rank]+1]
+        yedges, y = shift.cart.grid1D(boxsize, ngrid)
+        zedges, z = shift.cart.grid1D(boxsize, ngrid)
+        x3D, y3D, z3D = np.meshgrid(x, y, z, indexing='ij')
+        return x3D, y3D, z3D
+
+
     def _load_dens(self):
         """Load density files."""
         self.ERROR = inout.check_file(self.cosmicweb["Density_Prefix"], 0, self.siminfo["Ngrid"], self.siminfo["Boxsize"], self.MPI)
@@ -884,12 +947,14 @@ class CaCTus:
         dens_ind = np.arange(self.cosmicweb["Density_Nfiles"])
         dens_ind = self.MPI.split_array(dens_ind)
         if self.cosmicweb["Density_Nfiles"] == self.MPI.size:
-            _x3D, _y3D, _z3D, _dens, Ngrid, Boxsize = inout.load_dens(self.cosmicweb["Density_Prefix"], dens_ind[0])
+            _dens, Ngrid, Boxsize = inout.load_dens(self.cosmicweb["Density_Prefix"], dens_ind[0])
+            _x3D, _y3D, _z3D = self._create_pos4files(Boxsize, Ngrid, dens_ind[0], self.cosmicweb["Density_Nfiles"])
             self.density["dens"] = _dens
         else:
             if len(dens_ind) != 0:
                 for i in range(0, len(dens_ind)):
-                    _x3D, _y3D, _z3D, _dens, Ngrid, Boxsize = inout.load_dens(self.cosmicweb["Density_Prefix"], dens_ind[i])
+                    _dens, Ngrid, Boxsize = inout.load_dens(self.cosmicweb["Density_Prefix"], dens_ind[i])
+                    _x3D, _y3D, _z3D = self._create_pos4files(Boxsize, Ngrid, dens_ind[i], self.cosmicweb["Density_Nfiles"])
                     if i == 0:
                         x3D = _x3D.flatten()
                         y3D = _y3D.flatten()
@@ -963,7 +1028,8 @@ class CaCTus:
         sig_ind = self.MPI.split_array(sig_ind)
         if len(sig_ind) != 0:
             for i in range(0, len(sig_ind)):
-                Ngrid, Boxsize, _x3D, _y3D, _z3D, _Sc, _Sf, _Sw = inout.load_nexus_sig(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"], sig_ind[i])
+                Ngrid, Boxsize, _Sc, _Sf, _Sw = inout.load_nexus_sig(self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Prefix"], sig_ind[i])
+                _x3D, _y3D, _z3D = self._create_pos4files(Boxsize, Ngrid, sig_ind[i], self.cosmicweb["Nexus"]["Thresholds"]["SigFile"]["Nfiles"])
                 if i == 0:
                     x3D = _x3D.flatten()
                     y3D = _y3D.flatten()
@@ -1037,10 +1103,9 @@ class CaCTus:
     def _save_cweb(self):
         """Save cosmic web environments."""
         if self.cosmicweb["Type"] == "Nexus":
-            prefix = self.cosmicweb["Nexus"]["Thresholds"]["Output"] + str(
-                self.MPI.rank)
+            prefix = self.cosmicweb["Nexus"]["Thresholds"]["Output"] #+ str(self.MPI.rank)
         elif self.cosmicweb["Type"] == "Tweb":
-            prefix = self.cosmicweb["Tweb"]["Output"] + str(self.MPI.rank)
+            prefix = self.cosmicweb["Tweb"]["Output"] #+ str(self.MPI.rank)
         else:
             prefix = "Unspecified_segmentation_"
 
@@ -1048,15 +1113,21 @@ class CaCTus:
             prefix,
             rank=str(self.MPI.rank),
             output_data=self.cosmicweb["web_flag"])
+
+        self.MPI.mpi_print_zero()
         if self.output_settings["NPZ"]["WriteFile"]:
+            self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to %s{0-%i}.npz" % (prefix, self.MPI.size-1))
             output_class.save_npz()
         if self.output_settings["HDF5"]["WriteFile"]:
+            self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to %s{0-%i}.hdf5" % (prefix, self.MPI.size-1))
             output_class.save_hdf5()
         if self.output_settings["CautunNEXUS"]["WriteFile"]:
+            self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to %s{0-%i}.MMF" % (prefix, self.MPI.size-1))
             output_class.save_cautun_nexus(
                 header_bytes=self.output_settings["CautunNEXUS"]
                 ["HeaderBytes"],
                 array_order=self.output_settings["CautunNEXUS"]["ArrayOrder"])
+
 
     def _run_nexus_signature(self):
         """Compute Nexus signature."""
@@ -1114,8 +1185,7 @@ class CaCTus:
 
         prefix = self.cosmicweb["Nexus"]["Signature"]["Output"]
 
-        inout.save_nexus_sig(prefix, self.MPI.rank, self.siminfo["x3D"], self.siminfo["y3D"],
-            self.siminfo["z3D"], Sc, Sf, Sw, self.siminfo["Ngrid"], self.siminfo["Boxsize"])
+        inout.save_nexus_sig(prefix, self.MPI.rank, Sc, Sf, Sw, self.siminfo["Ngrid"], self.siminfo["Boxsize"])
 
 
     def _get_nexus_signature(self):
@@ -1238,12 +1308,6 @@ class CaCTus:
 
         self.cosmicweb["web_flag"] = src.nexus.get_cweb_map(clust_map, filam_map, sheet_map)
 
-        self.MPI.mpi_print_zero()
-        fname = self.cosmicweb["Nexus"]["Thresholds"][
-            "Output"] + "{0-%i}.npz" % (self.MPI.size - 1)
-        self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to " +
-                                fname)
-
         self._save_cweb()
 
 
@@ -1277,10 +1341,6 @@ class CaCTus:
                 self.MPI, boundary=self.siminfo["Boundary"], verbose=True, prefix=' -> ')
 
             self._run_cweb_summary()
-
-            self.MPI.mpi_print_zero()
-            fname = self.cosmicweb["Tweb"]["Output"] + "{0-%i}.npz" % (self.MPI.size-1)
-            self.MPI.mpi_print_zero(" ---> Saving cosmicweb environments to "+fname)
 
             self._save_cweb()
 
