@@ -170,3 +170,17 @@ CosmicWeb:
         Minvol: 1
       # Nexus cosmic web classification output filename
       Output: cweb_nexus_
+
+# Output settings
+OutputSettings:
+  # Write outputs in numpy binary format
+  NPZ:
+    WriteFile: True
+  # Write outputs in HDF5 format
+  HDF5:
+    WriteFile: None
+  # Write outputs in binary format preceded by a 1048 byte header
+  CatunNEXUS:
+    WriteFile: None
+    HeaderBytes: 1048
+    ArrayOrder: C
