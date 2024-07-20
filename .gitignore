@@ -3,14 +3,3 @@
 *dist
 *build
 *.egg*
-
-scripts/TEST*
-scripts/*.0
-scripts/*.1
-scripts/*.2
-scripts/*.3
-scripts/*.dat
-scripts/*.npz
-scripts/*.txt
-
-cactus/ext/shift/cart/mpi_fft_w_flush.py

@@ -8,7 +8,7 @@ import vinfo
 # -- Project information
 
 project = 'CACTUS'
-copyright = '2022, Krishna Naidoo'
+copyright = '2024, Krishna Naidoo'
 author = 'Krishna Naidoo'
 
 version = vinfo.vstr
@@ -22,7 +22,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.mathjax',
+    'sphinx_simplepdf'
 ]
 
 source_suffix = ['.rst', '.md']
