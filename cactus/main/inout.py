@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 
 
-def save_dens(prefix, rank, x3D, y3D, z3D, dens, Ngrid, Boxsize):
+def save_dens(prefix, rank, dens, Ngrid, Boxsize, precision='single'):
     """Save density in NPZ format.
 
     Parameters
@@ -13,17 +13,17 @@ def save_dens(prefix, rank, x3D, y3D, z3D, dens, Ngrid, Boxsize):
         Filename prefix.
     rank : int
         MPI node.
-    x3D, y3D, z3D : array
-        Cartesian grid.
     dens : array
         Density values.
     Ngrid : int
         Integer grid.
     Boxsize : float
         Boxsize length.
+    precision : str, optional
+        Precision of saved data.
     """
     fname = prefix + str(rank) + ".npz"
-    np.savez(fname, Ngrid=Ngrid, Boxsize=Boxsize, x3D=x3D, y3D=y3D, z3D=z3D, dens=dens)
+    np.savez(fname, Ngrid=Ngrid, Boxsize=Boxsize, dens=dens.astype(precision))
 
 
 def check_file(prefix, rank, Ngrid, Boxsize, MPI):
@@ -81,15 +81,12 @@ def load_dens(prefix, rank):
     data = np.load(fname)
     Ngrid = data['Ngrid']
     Boxsize = data['Boxsize']
-    x3D = data['x3D']
-    y3D = data['y3D']
-    z3D = data['z3D']
     dens = data['dens']
-    return x3D, y3D, z3D, dens, Ngrid, Boxsize
+    return dens, Ngrid, Boxsize
 
 
 
-def save_nexus_sig(prefix, rank, x3D, y3D, z3D, Sc, Sf, Sw, Ngrid, Boxsize):
+def save_nexus_sig(prefix, rank, Sc, Sf, Sw, Ngrid, Boxsize, precision='single'):
     """Save density in NPZ format.
 
     Parameters
@@ -106,9 +103,12 @@ def save_nexus_sig(prefix, rank, x3D, y3D, z3D, Sc, Sf, Sw, Ngrid, Boxsize):
         Integer grid.
     Boxsize : float
         Boxsize length.
+    precision : str, optional
+        Precision of saved data.
     """
     fname = prefix + str(rank) + ".npz"
-    np.savez(fname, Ngrid=Ngrid, Boxsize=Boxsize, x3D=x3D, y3D=y3D, z3D=z3D, Sc=Sc, Sf=Sf, Sw=Sw)
+    np.savez(fname, Ngrid=Ngrid, Boxsize=Boxsize, Sc=Sc.astype(precision),
+        Sf=Sf.astype(precision), Sw=Sw.astype(precision))
 
 
 def load_nexus_sig(prefix, rank):
@@ -133,13 +133,10 @@ def load_nexus_sig(prefix, rank):
     data = np.load(fname)
     Ngrid = data['Ngrid']
     Boxsize = data['Boxsize']
-    x3D = data['x3D']
-    y3D = data['y3D']
-    z3D = data['z3D']
     Sc = data['Sc']
     Sf = data['Sf']
     Sw = data['Sw']
-    return Ngrid, Boxsize, x3D, y3D, z3D, Sc, Sf, Sw
+    return Ngrid, Boxsize, Sc, Sf, Sw
 
 
 class OutputCosmicWeb(object):
