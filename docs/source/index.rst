@@ -1,6 +1,11 @@
-=========================================
-CaCTus: Cosmic web Classification Toolkit
-=========================================
+
+.. image:: _static/CaCTus_logo_light_big.jpg
+   :align: center
+   :class: only-light
+
+.. image:: _static/CaCTus_logo_dark_big.jpg
+   :align: center
+   :class: only-dark
 
 .. .. image:: https://badge.fury.io/py/magpie-pkg.svg
 ..    :target: https://badge.fury.io/py/magpie-pkg

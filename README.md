@@ -1,4 +1,4 @@
-# CaCTus: Cosmic web Classification Toolkit
+![biglogo](docs/source/_static/CaCTus_logo_big_github.jpg)
 
 [![Documentation Status](https://readthedocs.org/projects/cactus-doc/badge/?version=latest)](https://cactus-doc.readthedocs.io/en/latest/?badge=latest)
 

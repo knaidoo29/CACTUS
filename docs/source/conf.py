@@ -41,7 +41,14 @@ templates_path = ['_templates']
 
 # -- Options for HTML output
 
-html_theme = 'sphinx_rtd_theme'
+#html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
+
+html_static_path = ["_static"]
+html_theme_options = {
+    "light_logo": "CaCTus_logo_light.jpg",
+    "dark_logo": "CaCTus_logo_dark.jpg",
+}
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'
