@@ -8,7 +8,7 @@ import vinfo
 # -- Project information
 
 project = 'CACTUS'
-copyright = '2022, Krishna Naidoo'
+copyright = '2024, Krishna Naidoo'
 author = 'Krishna Naidoo'
 
 version = vinfo.vstr
@@ -22,7 +22,8 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
-    'sphinx.ext.mathjax'
+    'sphinx.ext.mathjax',
+    'sphinx_simplepdf'
 ]
 
 source_suffix = ['.rst', '.md']
@@ -40,7 +41,14 @@ templates_path = ['_templates']
 
 # -- Options for HTML output
 
-html_theme = 'sphinx_rtd_theme'
+#html_theme = 'sphinx_rtd_theme'
+html_theme = 'furo'
+
+html_static_path = ["_static"]
+html_theme_options = {
+    "light_logo": "CaCTus_logo_light.jpg",
+    "dark_logo": "CaCTus_logo_dark.jpg",
+}
 
 # -- Options for EPUB output
 epub_show_urls = 'footnote'

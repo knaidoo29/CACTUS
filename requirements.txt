@@ -1,8 +1,5 @@
 h5py
-healpy
-matplotlib
 mpi4py
-mpi4py-fft
 numpy
 PyYAML
 scipy
